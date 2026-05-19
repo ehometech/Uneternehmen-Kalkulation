@@ -86,9 +86,9 @@ function calcApprenticeCost(e){
 }
 function empField(e,k,label,type="text"){return `<div><label>${label}</label><input type="${type}" inputmode="decimal" value="${e[k]??''}" oninput="updEmp(${e.id},'${k}',this.value)" onblur="renderEmployees()"></div>`}
 function renderEmployees(){document.getElementById("employees").innerHTML=employees.map(e=>{const r=e.type==="apprentice"?calcApprenticeCost(e):calcEmployeeCost(e);return `<div class="card emp-card"><div class="grid"><div><label>Name</label><input value="${e.name}" oninput="updEmp(${e.id},'name',this.value)"></div><div><label>Typ</label><select onchange="updEmp(${e.id},'type',this.value)"><option value="journey" ${e.type!=="apprentice"?"selected":""}>Geselle/Mitarbeiter</option><option value="apprentice" ${e.type==="apprentice"?"selected":""}>Lehrling</option></select></div>${empField(e,'count','Anzahl')}</div><div class="grid">${e.type==="apprentice"?`${empField(e,'monthlyPay','Monatsvergütung €')}${empField(e,'vmwl','VWL €/Monat')}${empField(e,'dailyHours','Std./Tag')}${empField(e,'paidDays','Bezahlte Arbeitstage')}${empField(e,'vacationDays','Urlaubstage')}${empField(e,'holidays','Feiertage')}${empField(e,'sickDays','Krankheitstage')}${empField(e,'specialLeaveDays','Sonderurlaub')}${empField(e,'christmasPayPct','Sonderzahlung %')}${empField(e,'externalTrainingHours','Überbetr. Ausbildung h')}${empField(e,'vocationalSchoolHours','Berufsschule h')}${empField(e,'internalTrainingHours','Betriebl. Schulung h')}${empField(e,'generalApprenticePct','Allg. Lehrlingskosten %')}${empField(e,'trainerHourlyCost','Ausbilderkosten €/h')}${empField(e,'trainerHours','Ausbilderstunden')}`:`${empField(e,'hourly','Stundenlohn €')}${empField(e,'dailyHours','Std./Tag')}${empField(e,'paidDays','Bezahlte Arbeitstage')}${empField(e,'vacationDays','Urlaubstage')}${empField(e,'holidays','Feiertage')}${empField(e,'sickDays','Krankheitstage')}${empField(e,'specialLeaveDays','Sonderurlaub')}${empField(e,'holidayPayPct','Urlaubsgeld %')}${empField(e,'christmasPayPct','Weihnachtsgeld %')}${empField(e,'nonBillablePct','Nicht verrechenbar %')}${empField(e,'productivity','Produktivität %')}`}</div><details><summary>Sozialversicherung / Umlagen wie Perko</summary><div class="grid">${empField(e,'pensionPct','Rentenversicherung %')}${empField(e,'healthPct','Krankenversicherung %')}${empField(e,'unemploymentPct','Arbeitslosenvers. %')}${empField(e,'carePct','Pflegeversicherung %')}${empField(e,'accidentPct','Unfallversicherung %')}${empField(e,'efgUmlagePct','EFG-Umlage %')}${empField(e,'efgRefundPct','EFG-Erstattung %')}${e.type!=="apprentice"?empField(e,'otherLegalPct','Sonstige gesetzl. %')+empField(e,'companyAddonPct','Betriebl. Zusatzkosten %'):''}</div></details><div class="grid result-row"><div><span class="muted">Jahres-Brutto</span><b>${eur(r.gross)}</b></div><div><span class="muted">Personalkosten/Jahr</span><b>${eur(r.total)}</b></div><div><span class="muted">Produktive Std.</span><b>${r.productiveHours.toLocaleString('de-DE',{maximumFractionDigits:1})} h</b></div><div><span class="muted">Kosten/prod. Std.</span><b>${eur(r.costPerProductive)}/h</b></div></div><button class="danger" onclick="employees=employees.filter(x=>x.id!==${e.id});renderEmployees();calcAll()">Löschen</button></div>`}).join("")}
-function updEmp(id,k,v){let r=employees.find(x=>x.id===id);r[k]=k==='name'||k==='type'?v:num(v); if(k==='type'&&v==='apprentice'){Object.assign(r,{monthlyPay:r.monthlyPay||950,vmwl:r.vmwl||12,generalApprenticePct:r.generalApprenticePct||25,trainerHourlyCost:r.trainerHourlyCost||20,trainerHours:r.trainerHours||100,externalTrainingHours:r.externalTrainingHours||150,vocationalSchoolHours:r.vocationalSchoolHours||450,internalTrainingHours:r.internalTrainingHours||300})} if(k==='type') renderEmployees();calcAll();autoSave()}
-function addEmployee(){employees.push({id:Date.now(),type:"journey",name:"Mitarbeiter",count:1,hourly:18,productivity:100,...defaultPayroll});renderEmployees();calcAll();autoSave()}
-function addApprentice(){employees.push({id:Date.now(),type:"apprentice",name:"Lehrling",count:1,monthlyPay:950,vmwl:12,dailyHours:8,paidDays:261,holidays:10,vacationDays:30,specialLeaveDays:2,sickDays:7,holidayPayPct:0,christmasPayPct:10,pensionPct:18.6,healthPct:14.6,unemploymentPct:2.6,carePct:3.4,accidentPct:2.85,efgUmlagePct:2.9,efgRefundPct:70,generalApprenticePct:25,trainerHourlyCost:20,trainerHours:100,externalTrainingHours:150,vocationalSchoolHours:450,internalTrainingHours:300});renderEmployees();calcAll();autoSave()}
+function updEmp(id,k,v){let r=employees.find(x=>x.id===id);r[k]=k==='name'||k==='type'?v:num(v); if(k==='type'&&v==='apprentice'){Object.assign(r,{monthlyPay:r.monthlyPay||950,vmwl:r.vmwl||12,generalApprenticePct:r.generalApprenticePct||25,trainerHourlyCost:r.trainerHourlyCost||20,trainerHours:r.trainerHours||100,externalTrainingHours:r.externalTrainingHours||150,vocationalSchoolHours:r.vocationalSchoolHours||450,internalTrainingHours:r.internalTrainingHours||300})} if(k==='type') renderEmployees();calcAll()}
+function addEmployee(){employees.push({id:Date.now(),type:"journey",name:"Mitarbeiter",count:1,hourly:18,productivity:100,...defaultPayroll});renderEmployees();calcAll()}
+function addApprentice(){employees.push({id:Date.now(),type:"apprentice",name:"Lehrling",count:1,monthlyPay:950,vmwl:12,dailyHours:8,paidDays:261,holidays:10,vacationDays:30,specialLeaveDays:2,sickDays:7,holidayPayPct:0,christmasPayPct:10,pensionPct:18.6,healthPct:14.6,unemploymentPct:2.6,carePct:3.4,accidentPct:2.85,efgUmlagePct:2.9,efgRefundPct:70,generalApprenticePct:25,trainerHourlyCost:20,trainerHours:100,externalTrainingHours:150,vocationalSchoolHours:450,internalTrainingHours:300});renderEmployees();calcAll()}
 let babSortField='group',babSortAsc=true;
 function sortBAB(field){
  if(babSortField===field)babSortAsc=!babSortAsc;
@@ -156,10 +156,10 @@ function updRow(id,k,v,autoFill=null){
   r[autoFill]=Math.max(0,Math.round((100-sum)*100)/100);
   renderCostRows();
  }
- calcAll();autoSave();
+ calcAll();
 }
-function calcRow(id){let r=costRows.find(x=>x.id===id);r.amount=Math.round(safeCalc(r.calc)*100)/100;renderCostRows();calcAll();autoSave()}
-function addCostRow(){costRows.push({id:Date.now(),group:"lohnunabhängige GK",name:"Neue Kostenart",amount:0,calc:"",installation:100,verwaltung:0,material:0});renderCostRows();calcAll();autoSave()}
+function calcRow(id){let r=costRows.find(x=>x.id===id);r.amount=Math.round(safeCalc(r.calc)*100)/100;renderCostRows();calcAll()}
+function addCostRow(){costRows.push({id:Date.now(),group:"lohnunabhängige GK",name:"Neue Kostenart",amount:0,calc:"",installation:100,verwaltung:0,material:0});renderCostRows();calcAll()}
 
 function round2(v){return Math.round(num(v)*100)/100}
 function calcLohngebunden(e){
@@ -357,7 +357,7 @@ function addKFEPosition(){
  const next=(calcPositions.reduce((m,p)=>Math.max(m,num(p.pos)),0)||0)+1;
  const material = item.material_ek ?? item.matEk ?? 0;
  calcPositions.push({id:Date.now(),pos:next,kfe:item.kfe,name:`${item.leistung||''} - ${item.text||''}`.replace(/^ - /,'').trim(),qty:1,unit:item.unit||'m',matEk:material||0,minutes:item.minutes||0,cuPct:0,wastePct:0,machMin:0});
- renderCalcPositions(); calcAll();autoSave();
+ renderCalcPositions(); calcAll();
 }
 function parseCSVLine(line,sep){
  const out=[]; let cur=''; let quoted=false;
@@ -490,19 +490,6 @@ function calcPositionsTotals(minuteSell,mixedCost,matFactor,machMinuteSell,machH
  },{materialEk:0,materialSell:0,laborMin:0,laborSell:0,laborCost:0,machineMin:0,machineSell:0,machineCost:0});
 }
 
-let _autoSaveTimer=null;
-function autoSave(){
- clearTimeout(_autoSaveTimer);
- _autoSaveTimer=setTimeout(()=>{
-  try{
-   const data=buildSaveData();
-   dbSave(data).catch(()=>{
-    try{localStorage.setItem('kalkAppData',JSON.stringify(data));}catch(e){}
-   });
-   try{localStorage.setItem('kalkAppData',JSON.stringify(data));}catch(e){}
-  }catch(e){}
- },1500); // 1.5 Sekunden nach letzter Änderung
-}
 function calcAll(){
  const empResults=employees.map(e=>e.type==="apprentice"?calcApprenticeCost(e):calcEmployeeCost(e)); const totalProductive=empResults.reduce((s,r)=>s+r.productiveHours,0); const totalPayroll=empResults.reduce((s,r)=>s+r.total,0); const mixed=totalProductive?totalPayroll/totalProductive:0; syncPayrollToBABAuto(true); syncVehicleToBAB();
  const groupTotals=groups.map(g=>{let rs=costRows.filter(r=>r.group===g);return{group:g,amount:rs.reduce((s,r)=>s+num(r.amount),0),installation:rs.reduce((s,r)=>s+num(r.amount)*num(r.installation)/100,0),verwaltung:rs.reduce((s,r)=>s+num(r.amount)*num(r.verwaltung)/100,0),material:rs.reduce((s,r)=>s+num(r.amount)*num(r.material)/100,0)}})
@@ -552,87 +539,104 @@ function showSaveStatus(msg,ok=true){
  const el=document.getElementById('saveStatus');
  if(!el)return;
  el.textContent=msg;
- el.style.background=ok?'var(--green-bg)':'var(--red-bg)';
- el.style.borderColor=ok?'var(--green-border)':'var(--red-border)';
- el.style.color=ok?'var(--green)':'var(--red)';
+ el.style.background=ok?'#eef6ee':'#fef2f2';
+ el.style.border='1px solid '+(ok?'#a8d0a8':'#fca5a5');
+ el.style.color=ok?'#1a4a1a':'#7f1d1d';
  el.style.display='inline';
  clearTimeout(el._t);
- el._t=setTimeout(()=>el.style.display='none',4000);
+ el._t=setTimeout(()=>{if(ok)el.style.display='none';},5000);
 }
 function buildSaveData(){
- return {employees,costRows,calcPositions,inputs:getInputs(),kfeCustomDb:readCustomKFE(),savedAt:new Date().toISOString()};
-}
-// ── Speicher-Engine: IndexedDB (primär) + localStorage (Fallback) ──
-const DB_NAME='kalkApp',DB_STORE='data',DB_KEY='main';
-function openDB(){
- return new Promise((res,rej)=>{
-  try{
-   const req=indexedDB.open(DB_NAME,1);
-   req.onupgradeneeded=e=>e.target.result.createObjectStore(DB_STORE);
-   req.onsuccess=e=>res(e.target.result);
-   req.onerror=e=>rej(e.target.error);
-  }catch(e){rej(e);}
- });
-}
-function dbSave(data){
- return openDB().then(db=>new Promise((res,rej)=>{
-  const tx=db.transaction(DB_STORE,'readwrite');
-  tx.objectStore(DB_STORE).put(JSON.stringify(data),DB_KEY);
-  tx.oncomplete=()=>res();
-  tx.onerror=e=>rej(e.target.error);
- }));
-}
-function dbLoad(){
- return openDB().then(db=>new Promise((res,rej)=>{
-  const tx=db.transaction(DB_STORE,'readonly');
-  const req=tx.objectStore(DB_STORE).get(DB_KEY);
-  req.onsuccess=e=>res(e.target.result?JSON.parse(e.target.result):null);
-  req.onerror=e=>rej(e.target.error);
- }));
+ return {v:2,employees,costRows,calcPositions,inputs:getInputs(),kfeCustomDb:readCustomKFE(),savedAt:new Date().toISOString()};
 }
 function applyData(d){
- if(!d)return false;
- employees=d.employees||employees;
- costRows=d.costRows||costRows;
- calcPositions=d.calcPositions||calcPositions;
+ if(!d||!d.v)return false;
+ if(d.employees)employees=d.employees;
+ if(d.costRows)costRows=d.costRows;
+ if(d.calcPositions)calcPositions=d.calcPositions;
  if(d.kfeCustomDb)saveCustomKFE(d.kfeCustomDb);
  setInputs(d.inputs||{});
  renderEmployees();renderCostRows();renderCalcPositions();renderKFESearch();calcAll();
  return true;
 }
-function saveData(){
- const data=buildSaveData();
- // Primär: IndexedDB
- dbSave(data).then(()=>{
-  // Auch localStorage als Backup
-  try{localStorage.setItem('kalkAppData',JSON.stringify(data));}catch(e){}
-  showSaveStatus('✓ Gespeichert – '+new Date().toLocaleTimeString('de-DE'));
- }).catch(e=>{
-  // Fallback: nur localStorage
-  try{
-   localStorage.setItem('kalkAppData',JSON.stringify(data));
-   showSaveStatus('✓ Gespeichert (Fallback)');
-  }catch(e2){
-   showSaveStatus('✗ Speichern fehlgeschlagen – bitte "Als Datei sichern" nutzen!',false);
-  }
+// ── IndexedDB ──
+const _DB={name:'kalkApp2',store:'d',key:'main'};
+function _dbOpen(){
+ return new Promise((res,rej)=>{
+  const r=indexedDB.open(_DB.name,1);
+  r.onupgradeneeded=e=>e.target.result.createObjectStore(_DB.store);
+  r.onsuccess=e=>res(e.target.result);
+  r.onerror=e=>rej(e.target.error);
  });
 }
-function loadData(){
- dbLoad().then(d=>{
-  if(!d){
-   // Fallback: localStorage
-   try{const raw=localStorage.getItem('kalkAppData');if(raw)d=JSON.parse(raw);}catch(e){}
-  }
-  if(!applyData(d)){showSaveStatus('✗ Kein Speicherstand gefunden',false);return;}
-  const ts=d.savedAt?(' vom '+new Date(d.savedAt).toLocaleString('de-DE')):'';
-  showSaveStatus('✓ Geladen'+ts);
- }).catch(e=>{
-  // Fallback: localStorage
+function _dbPut(val){
+ return _dbOpen().then(db=>new Promise((res,rej)=>{
+  const tx=db.transaction(_DB.store,'readwrite');
+  tx.objectStore(_DB.store).put(val,_DB.key);
+  tx.oncomplete=()=>{db.close();res();}
+  tx.onerror=e=>{db.close();rej(e.target.error);}
+ }));
+}
+function _dbGet(){
+ return _dbOpen().then(db=>new Promise((res,rej)=>{
+  const tx=db.transaction(_DB.store,'readonly');
+  const r=tx.objectStore(_DB.store).get(_DB.key);
+  r.onsuccess=e=>{db.close();res(e.target.result);}
+  r.onerror=e=>{db.close();rej(e.target.error);}
+ }));
+}
+// ── Auto-Save (debounced) ──
+let _saveTimer=null;
+function autoSave(){
+ clearTimeout(_saveTimer);
+ _saveTimer=setTimeout(()=>{
   try{
-   const raw=localStorage.getItem('kalkAppData');
-   if(raw&&applyData(JSON.parse(raw))){showSaveStatus('✓ Geladen (Fallback)');return;}
+   const json=JSON.stringify(buildSaveData());
+   _dbPut(json).catch(()=>{});
+   try{localStorage.setItem('kalk2',json);}catch(e){}
+  }catch(e){console.error('autoSave error:',e);}
+ },1500);
+}
+// ── Manuelles Speichern ──
+function saveData(){
+ try{
+  const json=JSON.stringify(buildSaveData());
+  _dbPut(json).then(()=>{
+   try{localStorage.setItem('kalk2',json);}catch(e){}
+   showSaveStatus('✓ Gespeichert – '+new Date().toLocaleTimeString('de-DE'));
+  }).catch(e=>{
+   try{localStorage.setItem('kalk2',json);showSaveStatus('✓ Gespeichert (Fallback)');}
+   catch(e2){showSaveStatus('✗ Fehler: '+e2.message+' → Als Datei sichern!',false);}
+  });
+ }catch(e){showSaveStatus('✗ Fehler: '+e.message,false);}
+}
+// ── Manuelles Laden ──
+function loadData(){
+ _dbGet().then(json=>{
+  let d=json?JSON.parse(json):null;
+  if(!d){try{const r=localStorage.getItem('kalk2');if(r)d=JSON.parse(r);}catch(e){}}
+  if(!applyData(d)){showSaveStatus('✗ Kein Speicherstand gefunden',false);return;}
+  showSaveStatus('✓ Geladen – '+(d.savedAt?new Date(d.savedAt).toLocaleString('de-DE'):''));
+ }).catch(e=>{
+  try{const r=localStorage.getItem('kalk2');
+   if(r&&applyData(JSON.parse(r))){showSaveStatus('✓ Geladen (Fallback)');return;}
   }catch(e2){}
   showSaveStatus('✗ Ladefehler: '+e.message,false);
+ });
+}
+// ── Auto-Load beim Start ──
+function autoLoad(){
+ _dbGet().then(json=>{
+  let d=json?JSON.parse(json):null;
+  if(!d){try{const r=localStorage.getItem('kalk2');if(r)d=JSON.parse(r);}catch(e){}}
+  if(!d){return;} // Nichts gespeichert
+  if(applyData(d)){
+   showSaveStatus('✓ Daten geladen – '+(d.savedAt?new Date(d.savedAt).toLocaleString('de-DE'):''));
+  }
+ }).catch(e=>{
+  try{const r=localStorage.getItem('kalk2');
+   if(r&&applyData(JSON.parse(r))){showSaveStatus('✓ Daten geladen (Fallback)');}
+  }catch(e2){}
  });
 }
 function getInputs(){let o={};document.querySelectorAll("input[id]").forEach(i=>{if(i.type!=="file")o[i.id]=i.value});return o}
@@ -665,34 +669,4 @@ function importJSON(ev){
  r.readAsText(f);
 }
 syncPayrollToBABAuto(true);renderEmployees();renderCostRows();renderCalcPositions();renderKFESearch();calcAll();calcGFRate();
-// AUTO-LOAD: Beim Start automatisch laden
-setTimeout(()=>{
- function tryLoad(){
-  dbLoad().then(d=>{
-   if(!d){try{const r=localStorage.getItem('kalkAppData');if(r)d=JSON.parse(r);}catch(e){}}
-   if(!d)return; // Nichts gespeichert - neue Sitzung
-   employees=d.employees||employees;
-   costRows=d.costRows||costRows;
-   calcPositions=d.calcPositions||calcPositions;
-   if(d.kfeCustomDb)saveCustomKFE(d.kfeCustomDb);
-   setInputs(d.inputs||{});
-   renderEmployees();renderCostRows();renderCalcPositions();renderKFESearch();calcAll();
-   const ts=d.savedAt?' ('+new Date(d.savedAt).toLocaleString('de-DE')+')':'';
-   showSaveStatus('✓ Automatisch geladen'+ts);
-  }).catch(()=>{
-   try{
-    const r=localStorage.getItem('kalkAppData');
-    if(!r)return;
-    const d=JSON.parse(r);
-    employees=d.employees||employees;
-    costRows=d.costRows||costRows;
-    calcPositions=d.calcPositions||calcPositions;
-    if(d.kfeCustomDb)saveCustomKFE(d.kfeCustomDb);
-    setInputs(d.inputs||{});
-    renderEmployees();renderCostRows();renderCalcPositions();renderKFESearch();calcAll();
-    showSaveStatus('✓ Automatisch geladen (Fallback)');
-   }catch(e){}
-  });
- }
- tryLoad();
-},600);
+setTimeout(autoLoad,800);
