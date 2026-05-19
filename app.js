@@ -565,6 +565,7 @@ function calcAll(){
  setText("pkAnteil",pct(pkAnteil));
 
  const monProfit=n("monRev")-n("monCost");document.getElementById("monProfit").textContent=eur(monProfit);document.getElementById("yearProfit").textContent=eur(monProfit*12);document.getElementById("profitability").textContent=pct(n("monRev")?monProfit/n("monRev")*100:0);document.getElementById("targetRevenue").textContent=eur(n("monCost")/(1-n("targetProfit")/100||1))
+ autoSave();
 }
 function runCalc(){document.getElementById("calcResult").textContent=eur(safeCalc(document.getElementById("calcInput").value))}
 function showSaveStatus(msg,ok=true){
@@ -579,80 +580,63 @@ function showSaveStatus(msg,ok=true){
  el._t=setTimeout(()=>el.style.display='none',4000);
 }
 function buildSaveData(){
- return {employees,costRows,calcPositions,inputs:getInputs(),kfeCustomDb:readCustomKFE(),savedAt:new Date().toISOString()};
-}
-// ── Speicher-Engine: IndexedDB (primär) + localStorage (Fallback) ──
-const DB_NAME='kalkApp',DB_STORE='data',DB_KEY='main';
-function openDB(){
- return new Promise((res,rej)=>{
-  try{
-   const req=indexedDB.open(DB_NAME,1);
-   req.onupgradeneeded=e=>e.target.result.createObjectStore(DB_STORE);
-   req.onsuccess=e=>res(e.target.result);
-   req.onerror=e=>rej(e.target.error);
-  }catch(e){rej(e);}
- });
-}
-function dbSave(data){
- return openDB().then(db=>new Promise((res,rej)=>{
-  const tx=db.transaction(DB_STORE,'readwrite');
-  tx.objectStore(DB_STORE).put(JSON.stringify(data),DB_KEY);
-  tx.oncomplete=()=>res();
-  tx.onerror=e=>rej(e.target.error);
- }));
-}
-function dbLoad(){
- return openDB().then(db=>new Promise((res,rej)=>{
-  const tx=db.transaction(DB_STORE,'readonly');
-  const req=tx.objectStore(DB_STORE).get(DB_KEY);
-  req.onsuccess=e=>res(e.target.result?JSON.parse(e.target.result):null);
-  req.onerror=e=>rej(e.target.error);
- }));
+ return {v:3,employees,costRows,calcPositions,inputs:getInputs(),kfeCustomDb:readCustomKFE(),savedAt:new Date().toISOString()};
 }
 function applyData(d){
- if(!d)return false;
- employees=d.employees||employees;
- costRows=d.costRows||costRows;
- calcPositions=d.calcPositions||calcPositions;
+ if(!d||!d.v)return false;
+ if(d.employees)employees=d.employees;
+ if(d.costRows)costRows=d.costRows;
+ if(d.calcPositions)calcPositions=d.calcPositions;
  if(d.kfeCustomDb)saveCustomKFE(d.kfeCustomDb);
  setInputs(d.inputs||{});
  renderEmployees();renderCostRows();renderCalcPositions();renderKFESearch();calcAll();
  return true;
 }
-function saveData(){
- const data=buildSaveData();
- // Primär: IndexedDB
- dbSave(data).then(()=>{
-  // Auch localStorage als Backup
-  try{localStorage.setItem('kalkAppData',JSON.stringify(data));}catch(e){}
-  showSaveStatus('✓ Gespeichert – '+new Date().toLocaleTimeString('de-DE'));
- }).catch(e=>{
-  // Fallback: nur localStorage
-  try{
-   localStorage.setItem('kalkAppData',JSON.stringify(data));
-   showSaveStatus('✓ Gespeichert (Fallback)');
-  }catch(e2){
-   showSaveStatus('✗ Speichern fehlgeschlagen – bitte "Als Datei sichern" nutzen!',false);
-  }
- });
+// ── Speicher: localStorage (primär) + sessionStorage (Backup) ──
+// IndexedDB wurde entfernt – zu viele Browser-Probleme auf iPad/file://
+const SAVE_KEY='kalk_v3';
+function _saveToStorage(data){
+ const json=JSON.stringify(data);
+ let ok=false;
+ try{localStorage.setItem(SAVE_KEY,json);ok=true;}catch(e){}
+ try{sessionStorage.setItem(SAVE_KEY,json);}catch(e){}
+ return ok;
 }
+function _loadFromStorage(){
+ try{const r=localStorage.getItem(SAVE_KEY);if(r){const d=JSON.parse(r);if(d&&d.v)return d;}}catch(e){}
+ try{const r=sessionStorage.getItem(SAVE_KEY);if(r){const d=JSON.parse(r);if(d&&d.v)return d;}}catch(e){}
+ return null;
+}
+// ── Auto-Save (debounced, 1.5s nach letzter Änderung) ──
+let _saveTimer=null;
+function autoSave(){
+ clearTimeout(_saveTimer);
+ _saveTimer=setTimeout(()=>{
+  try{_saveToStorage(buildSaveData());}catch(e){console.warn('autoSave:',e);}
+ },1500);
+}
+// ── Auto-Load beim Start ──
+function autoLoad(){
+ const d=_loadFromStorage();
+ if(!d)return;
+ if(applyData(d)){
+  const ts=d.savedAt?' ('+new Date(d.savedAt).toLocaleString('de-DE')+')':'';
+  showSaveStatus('✓ Daten geladen'+ts);
+ }
+}
+// ── Manuelles Speichern ──
+function saveData(){
+ try{
+  const ok=_saveToStorage(buildSaveData());
+  if(ok)showSaveStatus('✓ Gespeichert – '+new Date().toLocaleTimeString('de-DE'));
+  else showSaveStatus('✗ Speichern fehlgeschlagen – bitte "Als Datei sichern"!',false);
+ }catch(e){showSaveStatus('✗ Fehler: '+e.message,false);}
+}
+// ── Manuelles Laden ──
 function loadData(){
- dbLoad().then(d=>{
-  if(!d){
-   // Fallback: localStorage
-   try{const raw=localStorage.getItem('kalkAppData');if(raw)d=JSON.parse(raw);}catch(e){}
-  }
-  if(!applyData(d)){showSaveStatus('✗ Kein Speicherstand gefunden',false);return;}
-  const ts=d.savedAt?(' vom '+new Date(d.savedAt).toLocaleString('de-DE')):'';
-  showSaveStatus('✓ Geladen'+ts);
- }).catch(e=>{
-  // Fallback: localStorage
-  try{
-   const raw=localStorage.getItem('kalkAppData');
-   if(raw&&applyData(JSON.parse(raw))){showSaveStatus('✓ Geladen (Fallback)');return;}
-  }catch(e2){}
-  showSaveStatus('✗ Ladefehler: '+e.message,false);
- });
+ const d=_loadFromStorage();
+ if(!applyData(d)){showSaveStatus('✗ Kein Speicherstand gefunden',false);return;}
+ showSaveStatus('✓ Geladen'+(d.savedAt?' vom '+new Date(d.savedAt).toLocaleString('de-DE'):''));
 }
 function getInputs(){let o={};document.querySelectorAll("input[id]").forEach(i=>{if(i.type!=="file")o[i.id]=i.value});return o}
 function setInputs(o){Object.entries(o).forEach(([k,v])=>{let el=document.getElementById(k);if(el)el.value=v})}
@@ -684,3 +668,5 @@ function importJSON(ev){
  r.readAsText(f);
 }
 syncPayrollToBABAuto(true);renderEmployees();renderCostRows();renderCalcPositions();renderKFESearch();calcAll();calcGFRate();
+setTimeout(autoLoad,600);
+setTimeout(updateGFBABRow,100);
