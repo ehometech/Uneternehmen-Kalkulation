@@ -309,6 +309,44 @@
       </div>
     </div>
 
+    <!-- BAB Zuschlagsätze -->
+    <div class="card">
+      <div class="card-title">BAB-Zuschlagsätze (Kalkulations-Übersicht)</div>
+      <div class="card-sub">Alle Zuschlagsätze aus dem BAB – berechnet nach dem klassischen Meisterschul-Schema. Basis ist jeweils der Fertigungslohn (Einzelkosten Installation).</div>
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Lohngebundene GK-Zuschlag</div>
+          <div class="kpi-val" id="zsLohngebunden">0,00 %</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">SV, BG, EFG ÷ Fertigungslohn</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Lohnnebenkosten-Zuschlag</div>
+          <div class="kpi-val" id="zsLohnnebenkosten">0,00 %</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">Nebenkosten ÷ Fertigungslohn</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Lohnunabhängige GK-Zuschlag</div>
+          <div class="kpi-val" id="zsLohnunabhaengig">0,00 %</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">Gemeinkosten ÷ Fertigungslohn</div>
+        </div>
+        <div class="kpi-card highlight">
+          <div class="kpi-label">Gemeinkostenzuschlag gesamt</div>
+          <div class="kpi-val" id="zsGesamt">0,00 %</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">Alle GK ÷ Fertigungslohn</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">BAB-Materialkostenzuschlag</div>
+          <div class="kpi-val" id="babMatZuschlag">0,00 %</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">Material-GK ÷ Material-EK</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Verwaltungskostenzuschlag</div>
+          <div class="kpi-val" id="zsVerwaltung">0,00 %</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">Verwaltungs-GK ÷ Herstellkosten</div>
+        </div>
+      </div>
+    </div>
+
     <!-- Personalkostenanteil (wie Perko perko_pgk) -->
     <div class="card">
       <div class="card-title">Personalkostenanteil (Kontrollrechnung nach Perko)</div>

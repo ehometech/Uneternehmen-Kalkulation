@@ -513,6 +513,22 @@ function calcAll(){
  const installBase=costRows.filter(r=>r.group==="Einzelkosten").reduce((s,r)=>s+num(r.amount)*num(r.installation)/100,0); const lohngeb=(groupTotals.find(g=>g.group==="lohngebundene GK")||{}).installation||0; const lohnneb=(groupTotals.find(g=>g.group==="Lohnnebenkosten")||{}).installation||0; const lohnun=(groupTotals.find(g=>g.group==="lohnunabhängige GK")||{}).installation||0; const overheadPct=installBase?((lohngeb+lohnneb+lohnun)/installBase*100):0;
  const hourly=mixed+(mixed*overheadPct/100); const hourlyProfit=hourly*(1+n("profit")/100); const minute=hourlyProfit/60; const mf=n("matFactor")*(1+n("matProfit")/100); const matSell=n("matCost")*mf; const labor=n("minutes")*minute; const bab=n("productiveHours")?(installBase+lohngeb+lohnneb+lohnun)/n("productiveHours"):0;
  document.getElementById("hourlyRate").textContent=eur(hourlyProfit)+"/Std."; document.getElementById("minuteRate").textContent=eur(minute)+"/min"; document.getElementById("mixedWage").textContent=eur(mixed); document.getElementById("payrollTotal").textContent=eur(totalPayroll); document.getElementById("payrollProductive").textContent=totalProductive.toLocaleString('de-DE',{maximumFractionDigits:1})+" h"; document.getElementById("matSurcharge").textContent=pct((mf-1)*100); document.getElementById("babHourly").textContent=eur(bab)+"/Std."; document.getElementById("laborPrice").textContent=eur(labor); document.getElementById("matSell").textContent=eur(matSell); document.getElementById("totalPrice").textContent=eur(labor+matSell); groupTotals.forEach((g,i)=>document.getElementById("g"+i).innerHTML=`Installation: ${eur(g.installation)}<br>Verwaltung: ${eur(g.verwaltung)}<br>Material: ${eur(g.material)}`)
+ // ── BAB-Zuschlagsätze ──
+ const fertigungslohn=costRows.filter(r=>r.group==="Einzelkosten").reduce((s,r)=>s+num(r.amount)*num(r.installation)/100,0);
+ const gkLohngebunden=(groupTotals.find(g=>g.group==="lohngebundene GK")||{}).installation||0;
+ const gkLohnnebenkosten=(groupTotals.find(g=>g.group==="Lohnnebenkosten")||{}).installation||0;
+ const gkLohnunabhaengig=(groupTotals.find(g=>g.group==="lohnunabhängige GK")||{}).installation||0;
+ const gkVerwaltung=costRows.reduce((s,r)=>s+num(r.amount)*num(r.verwaltung)/100,0);
+ const herstellkosten=fertigungslohn+gkLohngebunden+gkLohnnebenkosten+gkLohnunabhaengig;
+ const matGK=costRows.filter(r=>r.group!=="Einzelkosten").reduce((s,r)=>s+num(r.amount)*num(r.material)/100,0);
+ const matEK=costRows.filter(r=>r.group==="Einzelkosten").reduce((s,r)=>s+num(r.amount)*num(r.material)/100,0);
+ const _zs=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=pct(v);};
+ _zs("zsLohngebunden",fertigungslohn>0?gkLohngebunden/fertigungslohn*100:0);
+ _zs("zsLohnnebenkosten",fertigungslohn>0?gkLohnnebenkosten/fertigungslohn*100:0);
+ _zs("zsLohnunabhaengig",fertigungslohn>0?gkLohnunabhaengig/fertigungslohn*100:0);
+ _zs("zsGesamt",fertigungslohn>0?(gkLohngebunden+gkLohnnebenkosten+gkLohnunabhaengig)/fertigungslohn*100:0);
+ _zs("babMatZuschlag",matEK>0?matGK/matEK*100:0);
+ _zs("zsVerwaltung",herstellkosten>0?gkVerwaltung/herstellkosten*100:0);
  const veh=syncVehicleToBAB(); setText("vehDep",eur(veh.dep)); setText("shelfDep",eur(veh.shelf)); setText("vehFixedYear",eur(veh.fixed)); setText("vehVariableYear",eur(veh.variableYear)); setText("vehTotalYear",eur(veh.totalYear)+" (separat)"); setText("vehKmFull",eur(veh.fullKm)+"/km"); setText("vehKmYear",veh.kmYear.toLocaleString('de-DE',{maximumFractionDigits:0})+" km"); setText("vehFixedKm",eur(veh.fixedKm)+"/km"); setText("vehVarKm",eur(veh.varKm)+"/km"); setText("vehDayCost",eur(veh.dayCost)+"/Tag"); setText("vehHourCost",eur(veh.hourCost)+"/h");
  const mDep=(n("machPurchase")-n("machRest"))/(n("machYears")||1); const mFixed=mDep+n("machServiceYear")+n("machInsuranceYear")+n("machFinanceYear"); const mFixedHour=n("machHoursYear")?mFixed/n("machHoursYear"):0; const mVarHour=n("machEnergyHour")+n("machConsumablesHour")+n("machRepairHour"); const mInternalHour=mFixedHour+mVarHour; const mSellHour=mInternalHour*(1+n("machProfit")/100); const mMin=mSellHour/60; setText("machDep",eur(mDep)); setText("machFixedYear",eur(mFixed)); setText("machFixedHour",eur(mFixedHour)+"/h"); setText("machVarHour",eur(mVarHour)+"/h"); setText("machHour",eur(mSellHour)+"/h"); setText("machMinute",eur(mMin)+"/min");
  const qMatFactor=n("qMatFactor")||n("matFactor")||1;
