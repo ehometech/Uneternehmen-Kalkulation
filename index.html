@@ -1,0 +1,659 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#1a1a2e">
+  <link rel="manifest" href="manifest.json">
+  <title>Kalkulations-App BAB</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#f4f3ef;--surface:#ffffff;--surface2:#f9f8f5;--border:#e2ddd6;
+      --text:#1a1916;--muted:#6b6760;--accent:#1a3a2a;--accent2:#2d5a3d;
+      --blue:#1e3a5f;--blue-bg:#eef3f8;--blue-border:#b8cfe0;
+      --amber:#7a4e00;--amber-bg:#fef9ee;--amber-border:#f0d090;
+      --green:#1a4a1a;--green-bg:#eef6ee;--green-border:#a8d0a8;
+      --red-bg:#fef2f2;--red-border:#fca5a5;--red:#7f1d1d;
+      --radius:12px;--radius-sm:8px;--shadow:0 1px 3px rgba(0,0,0,.07);
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+    .wrap{max-width:1280px;margin:auto;padding:16px}
+
+    /* NAV */
+    .nav{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:20px;background:var(--surface);border-radius:var(--radius);padding:6px;border:1px solid var(--border)}
+    .nav-btn{padding:7px 14px;border-radius:var(--radius-sm);border:none;background:transparent;color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;transition:all .15s}
+    .nav-btn:hover{background:var(--surface2);color:var(--text)}
+    .nav-btn.active{background:var(--accent);color:#fff}
+    .section{display:none}.section.active{display:block}
+
+    /* CARDS */
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px;box-shadow:var(--shadow)}
+    .card.blue{background:var(--blue-bg);border-color:var(--blue-border)}
+    .card.amber{background:var(--amber-bg);border-color:var(--amber-border)}
+    .card.green{background:var(--green-bg);border-color:var(--green-border)}
+    .card-title{font-size:17px;font-weight:600;margin-bottom:4px;color:var(--text)}
+    .card-sub{font-size:13px;color:var(--muted);margin-bottom:14px}
+
+    /* HEADER BAR */
+    .header{background:var(--accent);color:#fff;border-radius:var(--radius);padding:20px 24px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+    .header h1{font-size:22px;font-weight:600;letter-spacing:-.3px}
+    .header .sub{font-size:13px;opacity:.7;margin-top:2px}
+    .header-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+    /* KPI GRID */
+    .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px}
+    .kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px}
+    .kpi-label{font-size:12px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+    .kpi-val{font-size:24px;font-weight:600;font-family:'DM Mono',monospace;color:var(--accent)}
+    .kpi-card.highlight{background:var(--accent);border-color:var(--accent)}
+    .kpi-card.highlight .kpi-label{color:rgba(255,255,255,.65)}
+    .kpi-card.highlight .kpi-val{color:#fff}
+
+    /* GRID */
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+
+    /* FORM */
+    label{font-size:12px;color:var(--muted);font-weight:500;display:block;margin-bottom:5px}
+    input,select,textarea{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);background:var(--surface);transition:border-color .15s}
+    input:focus,select:focus{outline:none;border-color:var(--accent2)}
+    input[readonly],input:disabled{background:var(--surface2);color:var(--muted)}
+    .input-hint{font-size:11px;color:var(--muted);margin-top:3px}
+
+    /* BUTTONS */
+    button{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;border-radius:var(--radius-sm);border:1px solid transparent;padding:8px 14px;transition:all .15s}
+    .btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+    .btn-primary:hover{background:var(--accent2)}
+    .btn-secondary{background:var(--surface);color:var(--text);border-color:var(--border)}
+    .btn-secondary:hover{background:var(--surface2)}
+    .btn-danger{background:var(--red-bg);color:var(--red);border-color:var(--red-border)}
+    .btn-sm{padding:5px 10px;font-size:12px}
+    .btn-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+
+    /* TABLE */
+    .scroll{overflow-x:auto}
+    table{border-collapse:collapse;width:100%;font-size:13px}
+    th{background:var(--surface2);font-weight:500;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+    td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+    tr:last-child td{border-bottom:none}
+    tr:hover td{background:var(--surface2)}
+    .auto-row td{background:#eef3ff}
+    .auto-row input[readonly]{background:#e8edff;font-style:italic}
+    td input,td select{padding:5px 8px;font-size:13px}
+    .right{text-align:right}
+    .mono{font-family:'DM Mono',monospace}
+
+    /* MISC */
+    .badge{display:inline-block;font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px}
+    .badge-blue{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border)}
+    .badge-amber{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border)}
+    .badge-green{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+    .muted{color:var(--muted)}
+    .small{font-size:12px}
+    .warn{color:#b45309;font-weight:600}
+    .divider{border:none;border-top:1px solid var(--border);margin:16px 0}
+    .info-box{background:var(--blue-bg);border:1px solid var(--blue-border);border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:var(--blue);margin-bottom:14px}
+    .warn-box{background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:var(--amber);margin-bottom:14px}
+    details summary{cursor:pointer;font-size:13px;color:var(--accent2);font-weight:500;padding:6px 0}
+    .emp-card{border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;background:var(--surface)}
+    .emp-card .result-row{background:var(--surface2);border-radius:var(--radius-sm);padding:12px;margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+    .emp-card .result-row .muted{font-size:12px}
+    .emp-card .result-row b{font-size:16px;font-family:'DM Mono',monospace;color:var(--accent);display:block;margin-top:2px}
+
+    /* WORKFLOW STEPS */
+    .steps{display:flex;gap:0;margin-bottom:20px;overflow-x:auto}
+    .step{display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--surface);border:1px solid var(--border);font-size:13px;font-weight:500;flex-shrink:0}
+    .step:first-child{border-radius:var(--radius-sm) 0 0 var(--radius-sm)}
+    .step:last-child{border-radius:0 var(--radius-sm) var(--radius-sm) 0}
+    .step+.step{border-left:none}
+    .step.done{background:var(--green-bg);border-color:var(--green-border);color:var(--green)}
+    .step.active-step{background:var(--accent);border-color:var(--accent);color:#fff}
+    .step-num{width:22px;height:22px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0}
+    .step.active-step .step-num{background:rgba(255,255,255,.25);color:#fff}
+    .step.done .step-num{background:var(--green);color:#fff}
+
+    /* SV HINT */
+    .sv-hint{background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:var(--radius-sm);padding:8px 12px;font-size:12px;color:var(--amber);margin-top:8px}
+
+    @media print{
+      .nav,.header-actions,.btn-row,.no-print{display:none!important}
+      .section{display:block!important}
+      .card{box-shadow:none;border:1px solid #ddd}
+      body{background:white}
+    }
+    @media(max-width:600px){
+      .grid-2,.grid-3{grid-template-columns:1fr}
+      .kpi-val{font-size:20px}
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div>
+      <h1>Kalkulations-App BAB</h1>
+      <div class="sub">Stundensatz · Gemeinkosten · Angebot · Fahrzeug · Deckungsbeitrag</div>
+    </div>
+    <div class="header-actions no-print">
+      <button class="btn-secondary btn-sm" onclick="saveData()" title="Im Browser-Speicher speichern (localStorage)">💾 Speichern</button>
+      <button class="btn-secondary btn-sm" onclick="loadData()" title="Aus Browser-Speicher laden">📂 Laden</button>
+      <button class="btn-primary btn-sm" onclick="exportJSON()" title="Als JSON-Datei speichern – sicherer als localStorage">⬇ Als Datei sichern</button>
+      <label style="margin:0"><button class="btn-secondary btn-sm" type="button" onclick="document.getElementById('importFile').click()" title="JSON-Datei laden">⬆ Datei laden</button><input id="importFile" type="file" style="display:none" onchange="importJSON(event)"></label>
+      <button class="btn-secondary btn-sm" onclick="window.print()">🖨 Drucken</button>
+      <span id="saveStatus" style="display:none;font-size:12px;font-weight:500;padding:4px 10px;border-radius:6px;background:var(--green-bg);border:1px solid var(--green-border)"></span>
+    </div>
+  </div>
+
+  <!-- WORKFLOW STEPS -->
+  <div class="steps no-print">
+    <div class="step active-step"><div class="step-num">1</div>Mitarbeiter &amp; Löhne</div>
+    <div class="step"><div class="step-num">2</div>Jahreskosten Firma</div>
+    <div class="step"><div class="step-num">3</div>Stundensatz &amp; Ergebnis</div>
+    <div class="step"><div class="step-num">4</div>Angebot kalkulieren</div>
+  </div>
+
+  <!-- NAV -->
+  <div class="nav no-print">
+    <button class="nav-btn active" onclick="showSection('sec-personal',this)">👤 Personal</button>
+    <button class="nav-btn" onclick="showSection('sec-bab',this)">📊 BAB / Jahreskosten</button>
+    <button class="nav-btn" onclick="showSection('sec-ergebnis',this)">🎯 Stundensatz</button>
+    <button class="nav-btn" onclick="showSection('sec-fahrzeug',this)">🚐 Fahrzeug</button>
+    <button class="nav-btn" onclick="showSection('sec-maschine',this)">⚙ Maschine</button>
+    <button class="nav-btn" onclick="showSection('sec-angebot',this)">📋 Angebot / KFE</button>
+    <button class="nav-btn" onclick="showSection('sec-db',this)">📈 Deckungsbeitrag</button>
+    <button class="nav-btn" onclick="showSection('sec-rentab',this)">💹 Rentabilität</button>
+    <button class="nav-btn" onclick="showSection('sec-rechner',this)">🔢 Rechner</button>
+  </div>
+
+  <!-- ===== SECTION 1: PERSONAL ===== -->
+  <div id="sec-personal" class="section active">
+
+    <div class="card">
+      <div class="card-title">Mitarbeiter &amp; Personalkosten</div>
+      <div class="card-sub">Alle Mitarbeiter und Lehrlinge eintragen. Die Personalkosten werden automatisch in den BAB übernommen.</div>
+      <div class="btn-row">
+        <button class="btn-primary" onclick="addEmployee()">+ Geselle / Mitarbeiter</button>
+        <button class="btn-secondary" onclick="addApprentice()">+ Lehrling</button>
+        <button class="btn-secondary" onclick="syncPayrollToBAB()">🔄 In BAB übernehmen</button>
+      </div>
+
+      <div class="sv-hint">
+        ℹ <b>SV-Sätze:</b> Bitte immer den <b>Gesamtbeitragssatz (AN + AG)</b> eintragen – z.B. Rentenversicherung 18,6 %, Krankenversicherung ~14,6 %. Die App berechnet automatisch den Arbeitgeberanteil (÷ 2).
+      </div>
+
+      <div id="employees"></div>
+
+      <div class="card" style="margin-top:12px;background:var(--surface2)">
+        <div class="grid">
+          <div><div class="muted small">Gemischter Personalkostensatz</div><b class="mono" id="mixedWage">0,00 €/h</b></div>
+          <div><div class="muted small">Personalkosten gesamt / Jahr</div><b class="mono" id="payrollTotal">0,00 €</b></div>
+          <div><div class="muted small">Produktive Stunden gesamt</div><b class="mono" id="payrollProductive">0 h</b></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===== SECTION 2: BAB ===== -->
+  <div id="sec-bab" class="section">
+
+    <div class="card">
+      <div class="card-title">BAB – Betriebsabrechnungsbogen</div>
+      <div class="card-sub">Trage hier alle Jahreskosten der Firma ein. Die blau markierten Zeilen werden automatisch aus dem Personalmodul berechnet.</div>
+
+      <div class="warn-box">
+        📌 <b>Workflow:</b> Zuerst Mitarbeiter eintragen → dann „In BAB übernehmen" klicken → dann restliche Jahreskosten aus der Buchhaltung eintragen → fertig. <b>Fahrzeugkosten gehören nicht hierher</b> – die werden im Angebotsmodul separat abgerechnet.<br><br>🔵 <b>Neuer BAB-Aufbau:</b> Fertigungslohn (Brutto) → lohngebundene GK (SV + BG + EFG automatisch) → lohnunabhängige GK (Unproduktiv + alle anderen Kosten). So entspricht der BAB dem klassischen Handwerk-Schema.
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-primary" onclick="addCostRow()">+ Kostenart hinzufügen</button>
+        <button class="btn-secondary" onclick="syncPayrollToBAB()">🔄 Personal aktualisieren</button>
+      </div>
+
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr id="babSortRow">
+              <th onclick="sortBAB('group')" style="cursor:pointer">Gruppe ↕</th>
+              <th onclick="sortBAB('name')" style="cursor:pointer">Kostenart ↕</th>
+              <th onclick="sortBAB('amount')" style="cursor:pointer;min-width:120px">Betrag / Jahr € ↕</th>
+              <th style="min-width:160px">Formelrechner</th>
+              <th onclick="sortBAB('installation')" style="cursor:pointer">Inst. % ↕</th>
+              <th onclick="sortBAB('verwaltung')" style="cursor:pointer">Verw. % ↕</th>
+              <th onclick="sortBAB('material')" style="cursor:pointer">Mat. % ↕</th>
+              <th>∑</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="costRows"></tbody>
+        </table>
+      </div>
+
+      <div style="margin-top:16px">
+        <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+          <div class="card"><b class="small">Einzelkosten</b><div id="g0" class="small muted" style="margin-top:4px"></div></div>
+          <div class="card"><b class="small">lohngebundene GK</b><div id="g1" class="small muted" style="margin-top:4px"></div></div>
+          <div class="card"><b class="small">Lohnnebenkosten</b><div id="g2" class="small muted" style="margin-top:4px"></div></div>
+          <div class="card"><b class="small">lohnunabhängige GK</b><div id="g3" class="small muted" style="margin-top:4px"></div></div>
+        </div>
+      </div>
+
+      <hr class="divider">
+      <div class="grid-2">
+        <div>
+          <label>Produktive Stunden / Jahr <span class="badge badge-blue">wird aus Mitarbeitern berechnet</span></label>
+          <input id="productiveHours" type="number" value="2321.2" oninput="calcAll()">
+          <div class="input-hint">Anwesenheitsstunden minus nicht verrechenbare Zeit</div>
+        </div>
+        <div>
+          <label>Gewinnzuschlag %</label>
+          <input id="profit" type="number" value="10" oninput="calcAll()">
+          <div class="input-hint">Betriebsindividueller Gewinnzuschlag auf Selbstkosten</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===== SECTION 3: ERGEBNIS / STUNDENSATZ ===== -->
+  <div id="sec-ergebnis" class="section">
+
+    <div class="kpi-grid">
+      <div class="kpi-card highlight">
+        <div class="kpi-label">Stundenverrechnungssatz</div>
+        <div class="kpi-val" id="hourlyRate">0,00 €</div>
+      </div>
+      <div class="kpi-card highlight">
+        <div class="kpi-label">Minutenverrechnungssatz</div>
+        <div class="kpi-val" id="minuteRate">0,00 €</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">BAB-Stundensatz</div>
+        <div class="kpi-val" id="babHourly">0,00 €</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Materialzuschlag</div>
+        <div class="kpi-val" id="matSurcharge">0,00 %</div>
+      </div>
+    </div>
+
+    <!-- Personalkostenanteil (wie Perko perko_pgk) -->
+    <div class="card">
+      <div class="card-title">Personalkostenanteil (Kontrollrechnung nach Perko)</div>
+      <div class="card-sub">Zeigt wie viel % der Angebotssumme auf Personalkosten entfällt – wichtig für Lohngleitklauseln und Kalkulations-Kontrolle.</div>
+      <div class="grid">
+        <div>
+          <label>Jahresumsatz (Angebotssumme netto) €</label>
+          <input id="pkAnnualRevenue" type="number" value="500000" oninput="calcAll()">
+        </div>
+        <div>
+          <label>Materialkosten / Jahr €</label>
+          <input id="pkMaterialYear" type="number" value="170000" oninput="calcAll()">
+        </div>
+        <div>
+          <label>Gerätekosten / Jahr €</label>
+          <input id="pkGeraeteYear" type="number" value="10000" oninput="calcAll()">
+        </div>
+        <div>
+          <label>Wagnis &amp; Gewinn %</label>
+          <input id="pkWagnisPCT" type="number" value="5" oninput="calcAll()">
+        </div>
+      </div>
+      <div class="grid" style="margin-top:12px">
+        <div class="kpi-card"><div class="kpi-label">Personalkosten / Jahr</div><div class="kpi-val" id="pkPersonal">0,00 €</div></div>
+        <div class="kpi-card"><div class="kpi-label">Gesamtkosten</div><div class="kpi-val" id="pkGesamtkosten">0,00 €</div></div>
+        <div class="kpi-card highlight"><div class="kpi-label">Personalkostenanteil</div><div class="kpi-val" id="pkAnteil">0,00 %</div></div>
+      </div>
+    </div>
+
+    <!-- GF-Stundensatz -->
+    <div class="card">
+      <div class="card-title">Geschäftsführer-Stundensatz (kalkulatorisch)</div>
+      <div class="card-sub">Berechnet den internen Kostensatz des Geschäftsführers auf Basis des kalkulatorischen Unternehmerlohns. Dieser Wert fließt <b>nicht</b> in den Mischstundensatz ein – er dient als Kontrollgröße und für separate GF-Tätigkeiten.</div>
+      <div class="grid">
+        <div>
+          <label>Kalkulatorischer Unternehmerlohn / Monat €</label>
+          <input id="gfMonthlyWage" type="number" value="5000" oninput="calcGFRate()">
+          <div class="input-hint">Marktübliches Gehalt für Ihre Tätigkeit als GF (kein tatsächliches Gehalt nötig)</div>
+        </div>
+        <div>
+          <label>Arbeitstage / Jahr</label>
+          <input id="gfWorkDays" type="number" value="220" oninput="calcGFRate()">
+          <div class="input-hint">Arbeitstage abzgl. Urlaub, Feiertage (Bsp: 261 − 30 − 11 = 220)</div>
+        </div>
+        <div>
+          <label>Stunden / Tag</label>
+          <input id="gfDailyHours" type="number" value="8" oninput="calcGFRate()">
+        </div>
+        <div>
+          <label>Davon produktiv verrechenbar %</label>
+          <input id="gfProductivePct" type="number" value="20" oninput="calcGFRate()">
+          <div class="input-hint">Anteil der Arbeitszeit, der direkt auf Aufträge entfällt</div>
+        </div>
+        <div>
+          <label>GF-Gemeinkosten-Zuschlag %</label>
+          <input id="gfOverheadPct" type="number" value="15" oninput="calcGFRate()">
+          <div class="input-hint">Zusatz für Büro, Verwaltung, nicht verrechenbare Zeit</div>
+        </div>
+        <div>
+          <label>Gewinnzuschlag GF %</label>
+          <input id="gfProfitPct" type="number" value="0" oninput="calcGFRate()">
+          <div class="input-hint">Optional: wenn GF-Zeit separat angeboten wird</div>
+        </div>
+      </div>
+      <div class="kpi-grid" style="margin-top:12px">
+        <div class="kpi-card"><div class="kpi-label">GF Jahreskosten kalk.</div><div class="kpi-val" id="gfYearTotal">0,00 €</div></div>
+        <div class="kpi-card"><div class="kpi-label">Produktive Stunden / Jahr</div><div class="kpi-val" id="gfProductiveHours">0 h</div></div>
+        <div class="kpi-card"><div class="kpi-label">GF-Kostensatz</div><div class="kpi-val" id="gfCostRate">0,00 €/h</div></div>
+        <div class="kpi-card highlight"><div class="kpi-label">GF-Stundensatz (inkl. Zuschläge)</div><div class="kpi-val" id="gfSellRate">0,00 €/h</div></div>
+        <div class="kpi-card"><div class="kpi-label">GF-Minutensatz</div><div class="kpi-val" id="gfMinRate">0,00 €/min</div></div>
+      </div>
+    </div>
+
+    <!-- Beispielposition -->
+    <div class="card">
+      <div class="card-title">Beispielposition</div>
+      <div class="grid">
+        <div><label>Materialfaktor</label><input id="matFactor" type="number" step="0.0001" value="1.3077" oninput="calcAll()"></div>
+        <div><label>Material Gewinn %</label><input id="matProfit" type="number" value="0" oninput="calcAll()"></div>
+        <div><label>Material EK €</label><input id="matCost" type="number" value="1000" oninput="calcAll()"></div>
+        <div><label>Arbeitszeit min</label><input id="minutes" type="number" value="60" oninput="calcAll()"></div>
+      </div>
+      <div class="grid" style="margin-top:12px">
+        <div class="kpi-card"><div class="kpi-label">Lohnpreis</div><div class="kpi-val" id="laborPrice">0,00 €</div></div>
+        <div class="kpi-card"><div class="kpi-label">Material VK</div><div class="kpi-val" id="matSell">0,00 €</div></div>
+        <div class="kpi-card highlight"><div class="kpi-label">Gesamt netto</div><div class="kpi-val" id="totalPrice">0,00 €</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SECTION 4: FAHRZEUG ===== -->
+  <div id="sec-fahrzeug" class="section">
+    <div class="card">
+      <div class="card-title">Fahrzeugkosten / Kastenwagen</div>
+      <div class="card-sub">Vollkostenrechnung inkl. Regal/Innenausbau. Fahrzeugkosten werden <b>nicht</b> in den BAB übernommen – sie werden separat pro Auftrag im Angebotsmodul abgerechnet.</div>
+      <div class="info-box">🚐 <b>Separates Abrechnungsmodell:</b> Fahrtkosten erscheinen als eigene Position im Angebot (km-Preis oder Tagespauschale). Das hält deinen Stundensatz sauber und erlaubt faire Abrechnung je nach Einsatzentfernung.</div>
+      <div class="grid">
+        <div><label>Anschaffungskosten €</label><input id="vehPurchase" type="number" value="30500" oninput="calcAll()"></div>
+        <div><label>Wiederbeschaffung + Inflation €</label><input id="vehInflation" type="number" value="6100" oninput="calcAll()"></div>
+        <div><label>Restwert €</label><input id="vehRest" type="number" value="5000" oninput="calcAll()"></div>
+        <div><label>Nutzungsdauer Jahre</label><input id="vehYears" type="number" value="6" oninput="calcAll()"></div>
+        <div><label>Regal / Innenausbau €</label><input id="shelfCost" type="number" value="5000" oninput="calcAll()"><div class="input-hint">Dein Regal: 5.000 € → wird über Nutzungsdauer abgeschrieben</div></div>
+        <div><label>Regal Nutzungsdauer</label><input id="shelfYears" type="number" value="8" oninput="calcAll()"></div>
+        <div><label>Einsatztage / Jahr</label><input id="vehDays" type="number" value="221" oninput="calcAll()"></div>
+        <div><label>Finanzierungskosten / Jahr €</label><input id="vehFin" type="number" value="0" oninput="calcAll()"></div>
+        <div><label>Vollkaskoversicherung / Jahr €</label><input id="vehIns" type="number" value="504.42" oninput="calcAll()"></div>
+        <div><label>Haftpflichtversicherung / Jahr €</label><input id="vehLiab" type="number" value="131.19" oninput="calcAll()"></div>
+        <div><label>Kfz-Steuer / Jahr €</label><input id="vehTax" type="number" value="533" oninput="calcAll()"></div>
+        <div><label>km pro Einsatztag</label><input id="kmDay" type="number" value="200" oninput="calcAll()"></div>
+        <div><label>Fahrzeugstunden pro Tag</label><input id="dailyVehicleHours" type="number" value="8" oninput="calcAll()"></div>
+        <div><label>Kraftstoffverbrauch L/100km</label><input id="fuel100" type="number" value="9.6" oninput="calcAll()"></div>
+        <div><label>Kraftstoffpreis €/Liter</label><input id="fuelPrice" type="number" value="1.75" oninput="calcAll()"></div>
+        <div><label>Wartung €/km</label><input id="maintKm" type="number" value="0.08" oninput="calcAll()"></div>
+        <div><label>Reparatur €/km</label><input id="repairKm" type="number" value="0.05" oninput="calcAll()"></div>
+        <div><label>Service / Inspektion €/km</label><input id="serviceKm" type="number" value="0.03" oninput="calcAll()"></div>
+        <div><label>Reifen €/km</label><input id="tireKm" type="number" value="0.03" oninput="calcAll()"></div>
+        <div><label>Öl / AdBlue €/km</label><input id="oilKm" type="number" value="0.02" oninput="calcAll()"></div>
+      </div>
+      <hr class="divider">
+      <div class="kpi-grid">
+        <div class="kpi-card"><div class="kpi-label">AfA / Jahr</div><div class="kpi-val" id="vehDep">0,00 €</div></div>
+        <div class="kpi-card"><div class="kpi-label">Regal AfA / Jahr</div><div class="kpi-val" id="shelfDep">0,00 €</div></div>
+        <div class="kpi-card"><div class="kpi-label">Fixkosten / Jahr</div><div class="kpi-val" id="vehFixedYear">0,00 €</div></div>
+        <div class="kpi-card"><div class="kpi-label">Variable Kosten / Jahr</div><div class="kpi-val" id="vehVariableYear">0,00 €</div></div>
+        <div class="kpi-card highlight"><div class="kpi-label">Fahrzeugkosten / Jahr (separat)</div><div class="kpi-val" id="vehTotalYear">0,00 €</div></div>
+        <div class="kpi-card"><div class="kpi-label">Jahreskilometer</div><div class="kpi-val" id="vehKmYear">0 km</div></div>
+        <div class="kpi-card"><div class="kpi-label">Fixkosten / km</div><div class="kpi-val" id="vehFixedKm">0,00 €</div></div>
+        <div class="kpi-card"><div class="kpi-label">Variable Kosten / km</div><div class="kpi-val" id="vehVarKm">0,00 €</div></div>
+        <div class="kpi-card highlight"><div class="kpi-label">Gesamtkosten / km</div><div class="kpi-val" id="vehKmFull">0,00 €</div></div>
+        <div class="kpi-card"><div class="kpi-label">Kosten / Tag</div><div class="kpi-val" id="vehDayCost">0,00 €</div></div>
+        <div class="kpi-card"><div class="kpi-label">Kosten / Stunde</div><div class="kpi-val" id="vehHourCost">0,00 €</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SECTION 5: MASCHINE ===== -->
+  <div id="sec-maschine" class="section">
+    <div class="card">
+      <div class="card-title">Maschinenzuschlag / Spezialwerkzeug</div>
+      <div class="card-sub">Für teure Maschinen, Prüfgeräte, Kernbohrgerät, Pressmaschine, Hebebühne oder Spezialwerkzeug.</div>
+      <div class="grid">
+        <div><label>Anschaffungskosten €</label><input id="machPurchase" type="number" value="10000" oninput="calcAll()"></div>
+        <div><label>Restwert €</label><input id="machRest" type="number" value="1000" oninput="calcAll()"></div>
+        <div><label>Nutzungsdauer Jahre</label><input id="machYears" type="number" value="5" oninput="calcAll()"></div>
+        <div><label>Nutzungsstunden / Jahr</label><input id="machHoursYear" type="number" value="400" oninput="calcAll()"></div>
+        <div><label>Wartung / Jahr €</label><input id="machServiceYear" type="number" value="500" oninput="calcAll()"></div>
+        <div><label>Versicherung / Jahr €</label><input id="machInsuranceYear" type="number" value="0" oninput="calcAll()"></div>
+        <div><label>Finanzierung / Jahr €</label><input id="machFinanceYear" type="number" value="0" oninput="calcAll()"></div>
+        <div><label>Energie €/h</label><input id="machEnergyHour" type="number" value="0" oninput="calcAll()"></div>
+        <div><label>Verschleiß / Verbrauch €/h</label><input id="machConsumablesHour" type="number" value="2" oninput="calcAll()"></div>
+        <div><label>Reparatur-Rücklage €/h</label><input id="machRepairHour" type="number" value="1" oninput="calcAll()"></div>
+        <div><label>Gewinnzuschlag %</label><input id="machProfit" type="number" value="10" oninput="calcAll()"></div>
+      </div>
+      <hr class="divider">
+      <div class="kpi-grid">
+        <div class="kpi-card"><div class="kpi-label">AfA / Jahr</div><div class="kpi-val" id="machDep">0,00 €</div></div>
+        <div class="kpi-card"><div class="kpi-label">Fixkosten / Jahr</div><div class="kpi-val" id="machFixedYear">0,00 €</div></div>
+        <div class="kpi-card"><div class="kpi-label">Fixkosten / h</div><div class="kpi-val" id="machFixedHour">0,00 €</div></div>
+        <div class="kpi-card"><div class="kpi-label">Variable Kosten / h</div><div class="kpi-val" id="machVarHour">0,00 €</div></div>
+        <div class="kpi-card highlight"><div class="kpi-label">Maschinenzuschlag / h</div><div class="kpi-val" id="machHour">0,00 €</div></div>
+        <div class="kpi-card highlight"><div class="kpi-label">Maschinenzuschlag / min</div><div class="kpi-val" id="machMinute">0,00 €</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SECTION 6: ANGEBOT / KFE ===== -->
+  <div id="sec-angebot" class="section">
+    <div class="card">
+      <div class="card-title">Angebotskalkulation mit KFE-Leistungsdaten</div>
+      <div class="card-sub">KFE-Positionen suchen und übernehmen. Menge × KFE-Minuten = Arbeitszeit. Lohn- und Materialpreise werden automatisch aus dem Stundensatz berechnet.</div>
+
+      <div class="card blue no-print">
+        <div class="card-title" style="font-size:15px">KFE-Datenbank</div>
+        <div class="grid">
+          <div><label>Suche (KFE-Nr., Leistung, Kabeltyp)</label><input id="kfeSearch" placeholder="z.B. NYM-J 5x2,5 oder 01.01.31" oninput="renderKFESearch()"></div>
+          <div>
+            <label>KFE-Position <span class="small muted" id="kfeCount"></span></label>
+            <select id="kfeSelect"></select>
+          </div>
+          <div style="display:flex;align-items:flex-end"><button class="btn-primary" onclick="addKFEPosition()">Position übernehmen</button></div>
+        </div>
+        <hr class="divider">
+        <div class="grid">
+          <div>
+            <label>Eigene KFE-CSV hochladen</label>
+            <div class="btn-row">
+              <button class="btn-secondary btn-sm" onclick="document.getElementById('kfeCsvImport').click()">📂 CSV hochladen</button>
+              <input id="kfeCsvImport" type="file" accept=".csv,text/csv" style="display:none" onchange="importKFECSV(event)">
+              <button class="btn-secondary btn-sm" onclick="downloadKFECSVTemplate()">📄 Vorlage laden</button>
+              <button class="btn-secondary btn-sm" onclick="clearCustomKFE()">🗑 Löschen</button>
+            </div>
+            <div class="input-hint">Spalten: KFE;Leistung;Kabel;Einheit;Minuten;MaterialEK</div>
+            <div class="small muted" id="kfeImportInfo" style="margin-top:4px"></div>
+          </div>
+          <div>
+            <label>Import-Art</label>
+            <select id="kfeImportMode">
+              <option value="append" selected>ergänzen / gleiche KFE überschreiben</option>
+              <option value="replace">komplette eigene CSV ersetzen</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-secondary" onclick="addCalcPosition()">+ Manuelle Position</button>
+      </div>
+
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Pos.</th><th>KFE-Nr.</th><th>Bezeichnung</th><th>Menge</th><th>Einheit</th>
+              <th>Mat EK/Stk</th><th>min/Einh.</th><th>Verschnitt %</th><th>Cu %</th><th>Masch. min</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="calcPositions"></tbody>
+        </table>
+      </div>
+
+      <!-- Fahrtkosten Angebot -->
+      <div class="card amber" style="margin-top:12px">
+        <div class="card-title" style="font-size:15px">🚐 Fahrtkosten / Anfahrt</div>
+        <div class="card-sub">Berechnet auf Basis des Fahrzeugmoduls. Trage km oder Einsatztage ein – der Kostensatz kommt automatisch.</div>
+        <div class="grid">
+          <div>
+            <label>Gefahrene km (Hin+Rück)</label>
+            <input id="qVehKm" type="number" value="0" oninput="calcAll()">
+            <div class="input-hint" id="qVehKmRate">– €/km aus Fahrzeugmodul</div>
+          </div>
+          <div>
+            <label>Einsatztage Fahrzeug</label>
+            <input id="qVehDays" type="number" value="0" oninput="calcAll()">
+            <div class="input-hint" id="qVehDayRate">– €/Tag aus Fahrzeugmodul</div>
+          </div>
+          <div>
+            <label>Fahrzeug Gewinnzuschlag %</label>
+            <input id="qVehProfitPct" type="number" value="0" oninput="calcAll()">
+            <div class="input-hint">z.B. 10 % Aufschlag auf Vollkosten</div>
+          </div>
+        </div>
+        <div class="kpi-grid" style="margin-top:10px">
+          <div class="kpi-card"><div class="kpi-label">Kosten km</div><div class="kpi-val" id="qVehCostKm">0,00 €</div></div>
+          <div class="kpi-card"><div class="kpi-label">Kosten Tage</div><div class="kpi-val" id="qVehCostDay">0,00 €</div></div>
+          <div class="kpi-card highlight"><div class="kpi-label">Fahrtkosten Gesamt</div><div class="kpi-val" id="qVehTotal">0,00 €</div></div>
+        </div>
+      </div>
+
+      <hr class="divider">
+      <div class="grid">
+        <div><label>Materialfaktor</label><input id="qMatFactor" type="number" value="1.3077" step="0.0001" oninput="calcAll()"><div class="input-hint">Aufschlag auf EK inkl. Lagerung, Verlust</div></div>
+        <div><label>Material Gewinn %</label><input id="qMatProfit" type="number" value="0" oninput="calcAll()"></div>
+        <div><label>Sonstige Direktkosten €</label><input id="qOther" type="number" value="0" oninput="calcAll()"></div>
+        <div><label>Risiko / Zuschlag %</label><input id="qRiskPct" type="number" value="3" oninput="calcAll()"></div>
+        <div><label>Nachlass %</label><input id="qDiscountPct" type="number" value="0" oninput="calcAll()"></div>
+      </div>
+
+      <div class="kpi-grid" style="margin-top:16px">
+        <div class="kpi-card"><div class="kpi-label">KFE-Zeit gesamt</div><div class="kpi-val" id="zvehTotalMin">0 min</div></div>
+        <div class="kpi-card"><div class="kpi-label">Arbeitsstunden</div><div class="kpi-val" id="zvehTotalHours">0 h</div></div>
+        <div class="kpi-card"><div class="kpi-label">Material EK</div><div class="kpi-val" id="zvehMatEk">0,00 €</div></div>
+        <div class="kpi-card"><div class="kpi-label">Lohnkosten intern</div><div class="kpi-val" id="zvehLaborCost">0,00 €</div></div>
+        <div class="kpi-card"><div class="kpi-label">Material VK</div><div class="kpi-val" id="qMatSell">0,00 €</div></div>
+        <div class="kpi-card"><div class="kpi-label">Lohn VK</div><div class="kpi-val" id="qLaborSell">0,00 €</div></div>
+        <div class="kpi-card"><div class="kpi-label">Maschine VK</div><div class="kpi-val" id="qMachSell">0,00 €</div></div>
+        <div class="kpi-card highlight"><div class="kpi-label">Angebot netto</div><div class="kpi-val" id="qNet">0,00 €</div></div>
+        <div class="kpi-card"><div class="kpi-label">Direkte Kosten</div><div class="kpi-val" id="qCost">0,00 €</div></div>
+        <div class="kpi-card highlight"><div class="kpi-label">Deckungsbeitrag</div><div class="kpi-val" id="qDb">0,00 €</div></div>
+        <div class="kpi-card"><div class="kpi-label">DB-Quote</div><div class="kpi-val" id="qDbPct">0,00 %</div></div>
+        <div class="kpi-card"><div class="kpi-label">Break-Even Umsatz</div><div class="kpi-val" id="qBreakEven">0,00 €</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SECTION 7: DECKUNGSBEITRAG ===== -->
+  <div id="sec-db" class="section">
+    <div class="card amber">
+      <div class="card-title">DB-Prüfung nach Preisuntergrenze</div>
+      <div class="card-sub">Prüft ob ein Auftrag zum angegebenen Preis die Fixkosten deckt. Werte kommen automatisch aus der Angebotskalkulation.</div>
+      <div class="grid">
+        <div><label>Preisuntergrenze %</label><input id="dbPricePct" type="number" value="90" oninput="calcAll()"><div class="input-hint">z.B. 90 % vom Angebotspreis als Minimum</div></div>
+        <div><label>Variable Materialkosten %</label><input id="dbMatVarPct" type="number" value="75" oninput="calcAll()"></div>
+        <div><label>Variable Lohnkosten %</label><input id="dbLaborVarPct" type="number" value="76" oninput="calcAll()"></div>
+        <div><label>Soll-Deckung %</label><input id="dbTargetPct" type="number" value="4" oninput="calcAll()"></div>
+        <div><label>Aufträge / Jahr</label><input id="dbAnnualQty" type="number" value="1" oninput="calcAll()"></div>
+        <div><label>Fixkosten / Jahr manuell € <span class="small">(leer = aus BAB)</span></label><input id="dbFixedManual" type="number" value="0" oninput="calcAll()"></div>
+      </div>
+      <div class="kpi-grid" style="margin-top:12px">
+        <div class="kpi-card"><div class="kpi-label">Lohneinzelkosten</div><div class="kpi-val" id="dbLaborSingle">0,00 €</div></div>
+        <div class="kpi-card"><div class="kpi-label">Materialkosten</div><div class="kpi-val" id="dbMaterial">0,00 €</div></div>
+        <div class="kpi-card"><div class="kpi-label">Selbstkosten</div><div class="kpi-val" id="dbSelf">0,00 €</div></div>
+        <div class="kpi-card"><div class="kpi-label">Preisuntergrenze</div><div class="kpi-val" id="dbPriceLower">0,00 €</div></div>
+        <div class="kpi-card"><div class="kpi-label">Var. Materialkosten</div><div class="kpi-val" id="dbVarMat">0,00 €</div></div>
+        <div class="kpi-card"><div class="kpi-label">Var. Lohnkosten</div><div class="kpi-val" id="dbVarLabor">0,00 €</div></div>
+        <div class="kpi-card"><div class="kpi-label">Deckungsbetrag/Auftrag</div><div class="kpi-val" id="dbAmount">0,00 €</div></div>
+        <div class="kpi-card"><div class="kpi-label">Deckungsbetrag / Jahr</div><div class="kpi-val" id="dbAmountYear">0,00 €</div></div>
+        <div class="kpi-card"><div class="kpi-label">Fixkosten / Jahr</div><div class="kpi-val" id="dbFixed">0,00 €</div></div>
+        <div class="kpi-card"><div class="kpi-label">Ist-Deckung</div><div class="kpi-val" id="dbActual">0,00 %</div></div>
+        <div class="kpi-card highlight"><div class="kpi-label">Soll erfüllt?</div><div class="kpi-val" id="dbStatus">Nein</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SECTION 8: RENTABILITÄT ===== -->
+  <div id="sec-rentab" class="section">
+    <div class="card">
+      <div class="card-title">Rentabilität</div>
+      <div class="grid">
+        <div><label>Monatsumsatz €</label><input id="monRev" type="number" value="25000" oninput="calcAll()"></div>
+        <div><label>Monatskosten €</label><input id="monCost" type="number" value="18000" oninput="calcAll()"></div>
+        <div><label>Zielgewinn %</label><input id="targetProfit" type="number" value="15" oninput="calcAll()"></div>
+      </div>
+      <div class="kpi-grid" style="margin-top:12px">
+        <div class="kpi-card"><div class="kpi-label">Monatsgewinn</div><div class="kpi-val" id="monProfit">0,00 €</div></div>
+        <div class="kpi-card highlight"><div class="kpi-label">Jahresgewinn</div><div class="kpi-val" id="yearProfit">0,00 €</div></div>
+        <div class="kpi-card"><div class="kpi-label">Rentabilität</div><div class="kpi-val" id="profitability">0,00 %</div></div>
+        <div class="kpi-card"><div class="kpi-label">Benötigter Umsatz</div><div class="kpi-val" id="targetRevenue">0,00 €</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SECTION 9: RECHNER ===== -->
+  <div id="sec-rechner" class="section">
+    <div class="card blue">
+      <div class="card-title">Taschenrechner</div>
+      <div class="grid">
+        <div><label>Formel eingeben</label><input id="calcInput" placeholder="z.B. (3000+450)*12 oder 9.6*1.75/100"></div>
+        <div style="display:flex;align-items:flex-end"><button class="btn-primary" onclick="runCalc()">=  Berechnen</button></div>
+        <div><div class="muted small">Ergebnis</div><div class="kpi-val" id="calcResult" style="margin-top:4px">0,00 €</div></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+
+<script src="kfe-db.js?v=12"></script>
+<script src="app.js?v=12"></script>
+<script>
+function showSection(id, btn){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(btn) btn.classList.add('active');
+  // update workflow steps
+  const stepMap={'sec-personal':0,'sec-bab':1,'sec-ergebnis':2,'sec-angebot':3};
+  const steps=document.querySelectorAll('.step');
+  const idx=stepMap[id];
+  steps.forEach((s,i)=>{
+    s.classList.remove('active-step','done');
+    if(idx!==undefined){
+      if(i<idx) s.classList.add('done');
+      else if(i===idx) s.classList.add('active-step');
+    }
+  });
+}
+if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
+// Auto-Save beim Schließen
+window.addEventListener('beforeunload', ()=>{
+  try{ dbSave(buildSaveData()); }catch(e){}
+});
+// Auto-Load beim Start (falls Speicherstand vorhanden)
+window.addEventListener('DOMContentLoaded', ()=>{
+  dbLoad().then(d=>{
+    const el=document.getElementById('saveStatus');
+    if(d&&el){
+      const ts=d.savedAt?(' vom '+new Date(d.savedAt).toLocaleString('de-DE')):'';
+      el.textContent='💡 Speicherstand vorhanden'+ts+' – „Laden" klicken';
+      el.style.background='var(--blue-bg)';el.style.borderColor='var(--blue-border)';
+      el.style.color='var(--blue)';el.style.display='inline';
+    }
+  }).catch(()=>{});
+});
+</script>
+</body>
+</html>
