@@ -640,19 +640,36 @@ function showSection(id, btn){
 if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
 // Auto-Save beim Schließen
 window.addEventListener('beforeunload', ()=>{
-  try{ dbSave(buildSaveData()); }catch(e){}
+  try{
+    const data=buildSaveData();
+    dbSave(data).catch(()=>{});
+    try{localStorage.setItem('kalkAppData',JSON.stringify(data));}catch(e){}
+  }catch(e){}
 });
 // Auto-Load beim Start (falls Speicherstand vorhanden)
 window.addEventListener('DOMContentLoaded', ()=>{
-  dbLoad().then(d=>{
+  // Beim Start: prüfen ob Speicherstand vorhanden
+  function checkSavedHint(){
     const el=document.getElementById('saveStatus');
-    if(d&&el){
-      const ts=d.savedAt?(' vom '+new Date(d.savedAt).toLocaleString('de-DE')):'';
-      el.textContent='💡 Speicherstand vorhanden'+ts+' – „Laden" klicken';
-      el.style.background='var(--blue-bg)';el.style.borderColor='var(--blue-border)';
-      el.style.color='var(--blue)';el.style.display='inline';
-    }
-  }).catch(()=>{});
+    if(!el)return;
+    dbLoad().then(d=>{
+      if(!d){try{const r=localStorage.getItem('kalkAppData');if(r)d=JSON.parse(r);}catch(e){}}
+      if(d&&d.savedAt){
+        const ts=' vom '+new Date(d.savedAt).toLocaleString('de-DE');
+        el.textContent='💡 Speicherstand vorhanden'+ts+' – „Laden" klicken';
+        el.style.background='#e8f4fd';el.style.borderColor='#93c5fd';
+        el.style.color='#1e3a5f';el.style.display='inline';
+      }
+    }).catch(()=>{
+      try{const r=localStorage.getItem('kalkAppData');
+        if(r){const d=JSON.parse(r);if(d&&d.savedAt){
+          el.textContent='💡 Speicherstand vorhanden – „Laden" klicken';
+          el.style.display='inline';
+        }}
+      }catch(e){}
+    });
+  }
+  setTimeout(checkSavedHint,500);
 });
 </script>
 </body>

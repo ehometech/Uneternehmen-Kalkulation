@@ -310,12 +310,10 @@ function calcVehicleQuote(){
 
 
 
-function readCustomKFE(){
- try{return JSON.parse(localStorage.getItem('kfeCustomDb')||'[]')||[];}catch(e){return [];}
-}
-function saveCustomKFE(rows){
- localStorage.setItem('kfeCustomDb',JSON.stringify(rows||[]));
-}
+// KFE Custom DB – in memory, wird mit Hauptdaten gespeichert
+let _kfeCustomDb=[];
+function readCustomKFE(){ return _kfeCustomDb||[]; }
+function saveCustomKFE(rows){ _kfeCustomDb=rows||[]; }
 function kfeDb(){
  const base=Array.isArray(window.KFE_CABLE_DB)?window.KFE_CABLE_DB:[];
  const custom=readCustomKFE();
@@ -449,7 +447,7 @@ function downloadKFECSVTemplate(){
 }
 function clearCustomKFE(){
  if(!confirm('Eigene importierte KFE-CSV wirklich löschen?')) return;
- localStorage.removeItem('kfeCustomDb');
+ _kfeCustomDb=[];
  renderKFESearch();
  alert('Eigene KFE-CSV wurde gelöscht.');
 }
@@ -550,14 +548,16 @@ function showSaveStatus(msg,ok=true){
 function buildSaveData(){
  return {employees,costRows,calcPositions,inputs:getInputs(),kfeCustomDb:readCustomKFE(),savedAt:new Date().toISOString()};
 }
-// IndexedDB wrapper – funktioniert bei file:// und http:// zuverlässig
+// ── Speicher-Engine: IndexedDB (primär) + localStorage (Fallback) ──
 const DB_NAME='kalkApp',DB_STORE='data',DB_KEY='main';
 function openDB(){
  return new Promise((res,rej)=>{
-  const req=indexedDB.open(DB_NAME,1);
-  req.onupgradeneeded=e=>e.target.result.createObjectStore(DB_STORE);
-  req.onsuccess=e=>res(e.target.result);
-  req.onerror=e=>rej(e.target.error);
+  try{
+   const req=indexedDB.open(DB_NAME,1);
+   req.onupgradeneeded=e=>e.target.result.createObjectStore(DB_STORE);
+   req.onsuccess=e=>res(e.target.result);
+   req.onerror=e=>rej(e.target.error);
+  }catch(e){rej(e);}
  });
 }
 function dbSave(data){
@@ -576,32 +576,50 @@ function dbLoad(){
   req.onerror=e=>rej(e.target.error);
  }));
 }
+function applyData(d){
+ if(!d)return false;
+ employees=d.employees||employees;
+ costRows=d.costRows||costRows;
+ calcPositions=d.calcPositions||calcPositions;
+ if(d.kfeCustomDb)saveCustomKFE(d.kfeCustomDb);
+ setInputs(d.inputs||{});
+ renderEmployees();renderCostRows();renderCalcPositions();renderKFESearch();calcAll();
+ return true;
+}
 function saveData(){
  const data=buildSaveData();
+ // Primär: IndexedDB
  dbSave(data).then(()=>{
+  // Auch localStorage als Backup
+  try{localStorage.setItem('kalkAppData',JSON.stringify(data));}catch(e){}
   showSaveStatus('✓ Gespeichert – '+new Date().toLocaleTimeString('de-DE'));
  }).catch(e=>{
-  // Fallback localStorage
-  try{localStorage.setItem('kalkAppData',JSON.stringify(data));showSaveStatus('✓ Gespeichert (localStorage Fallback)');}
-  catch(e2){showSaveStatus('✗ Fehler: '+e.message+' – bitte "Als Datei sichern" nutzen!',false);}
+  // Fallback: nur localStorage
+  try{
+   localStorage.setItem('kalkAppData',JSON.stringify(data));
+   showSaveStatus('✓ Gespeichert (Fallback)');
+  }catch(e2){
+   showSaveStatus('✗ Speichern fehlgeschlagen – bitte "Als Datei sichern" nutzen!',false);
+  }
  });
 }
 function loadData(){
  dbLoad().then(d=>{
   if(!d){
-   // try localStorage fallback
+   // Fallback: localStorage
    try{const raw=localStorage.getItem('kalkAppData');if(raw)d=JSON.parse(raw);}catch(e){}
   }
-  if(!d){showSaveStatus('✗ Kein Speicherstand gefunden',false);return;}
-  employees=d.employees||employees;
-  costRows=d.costRows||costRows;
-  calcPositions=d.calcPositions||calcPositions;
-  if(d.kfeCustomDb)saveCustomKFE(d.kfeCustomDb);
-  setInputs(d.inputs||{});
-  renderEmployees();renderCostRows();renderCalcPositions();renderKFESearch();calcAll();
+  if(!applyData(d)){showSaveStatus('✗ Kein Speicherstand gefunden',false);return;}
   const ts=d.savedAt?(' vom '+new Date(d.savedAt).toLocaleString('de-DE')):'';
   showSaveStatus('✓ Geladen'+ts);
- }).catch(e=>showSaveStatus('✗ Ladefehler: '+e.message,false));
+ }).catch(e=>{
+  // Fallback: localStorage
+  try{
+   const raw=localStorage.getItem('kalkAppData');
+   if(raw&&applyData(JSON.parse(raw))){showSaveStatus('✓ Geladen (Fallback)');return;}
+  }catch(e2){}
+  showSaveStatus('✗ Ladefehler: '+e.message,false);
+ });
 }
 function getInputs(){let o={};document.querySelectorAll("input[id]").forEach(i=>{if(i.type!=="file")o[i.id]=i.value});return o}
 function setInputs(o){Object.entries(o).forEach(([k,v])=>{let el=document.getElementById(k);if(el)el.value=v})}
