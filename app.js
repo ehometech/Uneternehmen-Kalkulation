@@ -651,3 +651,28 @@ function importJSON(ev){
  r.readAsText(f);
 }
 syncPayrollToBABAuto(true);renderEmployees();renderCostRows();renderCalcPositions();renderKFESearch();calcAll();calcGFRate();
+// Prüfen ob gespeicherter Stand vorhanden
+setTimeout(()=>{
+ try{
+  dbLoad().then(d=>{
+   if(!d){try{const r=localStorage.getItem('kalkAppData');if(r)d=JSON.parse(r);}catch(e){}}
+   const el=document.getElementById('saveStatus');
+   if(d&&d.savedAt&&el){
+    const ts=' vom '+new Date(d.savedAt).toLocaleString('de-DE');
+    el.textContent='💡 Speicherstand vorhanden'+ts+' – „Laden" klicken';
+    el.style.background='#e8f4fd';el.style.border='1px solid #93c5fd';
+    el.style.color='#1e3a5f';el.style.display='inline';
+   }
+  }).catch(()=>{
+   try{
+    const r=localStorage.getItem('kalkAppData');
+    if(r){const d=JSON.parse(r);const el=document.getElementById('saveStatus');
+     if(d&&d.savedAt&&el){
+      el.textContent='💡 Speicherstand vorhanden – „Laden" klicken';
+      el.style.display='inline';
+     }
+    }
+   }catch(e){}
+  });
+ }catch(e){}
+},800);
