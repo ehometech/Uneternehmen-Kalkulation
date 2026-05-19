@@ -13,6 +13,7 @@ let costRows=[
  {id:21,auto:"productiveApprentice",group:"Einzelkosten",name:"Fertigungskosten produktive Lehrlinge",amount:16800,calc:"automatisch aus Lehrlingen",installation:100,verwaltung:0,material:0},
  {id:19,auto:"unproductivePayroll",group:"lohnunabhängige GK",name:"kalkulatorische unprod. Mitarbeiterkosten",amount:18000,calc:"automatisch aus Personal",installation:70,verwaltung:30,material:0},
  {id:20,auto:"unproductiveApprentice",group:"lohnunabhängige GK",name:"kalkulatorische unprod. Lehrlingskosten",amount:6000,calc:"automatisch aus Lehrlingen",installation:70,verwaltung:30,material:0},
+ {id:9001,group:"lohnunabhängige GK",name:"Kalkulatorischer Unternehmerlohn GF (Netto + PKV)",amount:41400,calc:"3.000 € Netto/Monat + 450 € PKV = 3.450 €/Monat × 12",installation:100,verwaltung:0,material:0},
  {id:1001,group:"Einzelkosten",name:"Fremdleistungen / Subunternehmer",amount:1296.14,calc:"aus CSV 2025: Fremdleistungen §13b, Fremdleistungen §13b Drittland, Subunternehmer",installation:100,verwaltung:0,material:0},
  {id:1002,group:"Einzelkosten",name:"Lohn/Gehalt aus Buchhaltung - prüfen",amount:1475.34,calc:"aus CSV 2025: Verrechnung Lohn/Gehalt",installation:100,verwaltung:0,material:0},
  {id:1003,group:"Einzelkosten",name:"Materialverbrauch / Materialverkauf",amount:57616.58,calc:"aus CSV 2025: Innergemeinschaftlicher Erwerb, Material/Waren, Materialeinkauf",installation:0,verwaltung:0,material:100},
@@ -254,6 +255,22 @@ function calcGFRate(){
  setText("gfMinRate",eur(minRate)+"/min");
 }
 
+function updateGFBABRow(){
+ const monthly=(n("gfNetMonthly")||3000)+(n("gfPKV")||450)+(n("gfExtra")||0);
+ const yearly=monthly*12;
+ setText("gfBABMonthly",eur(monthly));
+ setText("gfBABYearly",eur(yearly)+" → BAB");
+ // Update the BAB row
+ const r=costRows.find(x=>x.id===9001);
+ if(r){
+  r.amount=round2(yearly);
+  r.calc=(n("gfNetMonthly")||3000)+" € Netto + "+(n("gfPKV")||450)+" € PKV"+(n("gfExtra")?" + "+n("gfExtra")+" € Sonstiges":"")+"/Monat × 12";
+  const el=document.getElementById("rowAmount_9001");
+  if(el&&document.activeElement!==el)el.value=round2(yearly);
+ }
+ autoSave();
+ calcAll();
+}
 function syncPayrollToBABAuto(updateProductiveHours=true){
  const s=payrollBABSplit();
  // Einzelkosten – produktive Lohnkosten
@@ -532,111 +549,93 @@ function calcAll(){
  setText("pkAnteil",pct(pkAnteil));
 
  const monProfit=n("monRev")-n("monCost");document.getElementById("monProfit").textContent=eur(monProfit);document.getElementById("yearProfit").textContent=eur(monProfit*12);document.getElementById("profitability").textContent=pct(n("monRev")?monProfit/n("monRev")*100:0);document.getElementById("targetRevenue").textContent=eur(n("monCost")/(1-n("targetProfit")/100||1))
- autoSave();
 }
 function runCalc(){document.getElementById("calcResult").textContent=eur(safeCalc(document.getElementById("calcInput").value))}
 function showSaveStatus(msg,ok=true){
  const el=document.getElementById('saveStatus');
  if(!el)return;
  el.textContent=msg;
- el.style.background=ok?'#eef6ee':'#fef2f2';
- el.style.border='1px solid '+(ok?'#a8d0a8':'#fca5a5');
- el.style.color=ok?'#1a4a1a':'#7f1d1d';
+ el.style.background=ok?'var(--green-bg)':'var(--red-bg)';
+ el.style.borderColor=ok?'var(--green-border)':'var(--red-border)';
+ el.style.color=ok?'var(--green)':'var(--red)';
  el.style.display='inline';
  clearTimeout(el._t);
- el._t=setTimeout(()=>{if(ok)el.style.display='none';},5000);
+ el._t=setTimeout(()=>el.style.display='none',4000);
 }
 function buildSaveData(){
- return {v:2,employees,costRows,calcPositions,inputs:getInputs(),kfeCustomDb:readCustomKFE(),savedAt:new Date().toISOString()};
+ return {employees,costRows,calcPositions,inputs:getInputs(),kfeCustomDb:readCustomKFE(),savedAt:new Date().toISOString()};
+}
+// ── Speicher-Engine: IndexedDB (primär) + localStorage (Fallback) ──
+const DB_NAME='kalkApp',DB_STORE='data',DB_KEY='main';
+function openDB(){
+ return new Promise((res,rej)=>{
+  try{
+   const req=indexedDB.open(DB_NAME,1);
+   req.onupgradeneeded=e=>e.target.result.createObjectStore(DB_STORE);
+   req.onsuccess=e=>res(e.target.result);
+   req.onerror=e=>rej(e.target.error);
+  }catch(e){rej(e);}
+ });
+}
+function dbSave(data){
+ return openDB().then(db=>new Promise((res,rej)=>{
+  const tx=db.transaction(DB_STORE,'readwrite');
+  tx.objectStore(DB_STORE).put(JSON.stringify(data),DB_KEY);
+  tx.oncomplete=()=>res();
+  tx.onerror=e=>rej(e.target.error);
+ }));
+}
+function dbLoad(){
+ return openDB().then(db=>new Promise((res,rej)=>{
+  const tx=db.transaction(DB_STORE,'readonly');
+  const req=tx.objectStore(DB_STORE).get(DB_KEY);
+  req.onsuccess=e=>res(e.target.result?JSON.parse(e.target.result):null);
+  req.onerror=e=>rej(e.target.error);
+ }));
 }
 function applyData(d){
- if(!d||!d.v)return false;
- if(d.employees)employees=d.employees;
- if(d.costRows)costRows=d.costRows;
- if(d.calcPositions)calcPositions=d.calcPositions;
+ if(!d)return false;
+ employees=d.employees||employees;
+ costRows=d.costRows||costRows;
+ calcPositions=d.calcPositions||calcPositions;
  if(d.kfeCustomDb)saveCustomKFE(d.kfeCustomDb);
  setInputs(d.inputs||{});
  renderEmployees();renderCostRows();renderCalcPositions();renderKFESearch();calcAll();
  return true;
 }
-// ── IndexedDB ──
-const _DB={name:'kalkApp2',store:'d',key:'main'};
-function _dbOpen(){
- return new Promise((res,rej)=>{
-  const r=indexedDB.open(_DB.name,1);
-  r.onupgradeneeded=e=>e.target.result.createObjectStore(_DB.store);
-  r.onsuccess=e=>res(e.target.result);
-  r.onerror=e=>rej(e.target.error);
+function saveData(){
+ const data=buildSaveData();
+ // Primär: IndexedDB
+ dbSave(data).then(()=>{
+  // Auch localStorage als Backup
+  try{localStorage.setItem('kalkAppData',JSON.stringify(data));}catch(e){}
+  showSaveStatus('✓ Gespeichert – '+new Date().toLocaleTimeString('de-DE'));
+ }).catch(e=>{
+  // Fallback: nur localStorage
+  try{
+   localStorage.setItem('kalkAppData',JSON.stringify(data));
+   showSaveStatus('✓ Gespeichert (Fallback)');
+  }catch(e2){
+   showSaveStatus('✗ Speichern fehlgeschlagen – bitte "Als Datei sichern" nutzen!',false);
+  }
  });
 }
-function _dbPut(val){
- return _dbOpen().then(db=>new Promise((res,rej)=>{
-  const tx=db.transaction(_DB.store,'readwrite');
-  tx.objectStore(_DB.store).put(val,_DB.key);
-  tx.oncomplete=()=>{db.close();res();}
-  tx.onerror=e=>{db.close();rej(e.target.error);}
- }));
-}
-function _dbGet(){
- return _dbOpen().then(db=>new Promise((res,rej)=>{
-  const tx=db.transaction(_DB.store,'readonly');
-  const r=tx.objectStore(_DB.store).get(_DB.key);
-  r.onsuccess=e=>{db.close();res(e.target.result);}
-  r.onerror=e=>{db.close();rej(e.target.error);}
- }));
-}
-// ── Auto-Save (debounced) ──
-let _saveTimer=null;
-function autoSave(){
- clearTimeout(_saveTimer);
- _saveTimer=setTimeout(()=>{
-  try{
-   const json=JSON.stringify(buildSaveData());
-   _dbPut(json).catch(()=>{});
-   try{localStorage.setItem('kalk2',json);}catch(e){}
-  }catch(e){console.error('autoSave error:',e);}
- },1500);
-}
-// ── Manuelles Speichern ──
-function saveData(){
- try{
-  const json=JSON.stringify(buildSaveData());
-  _dbPut(json).then(()=>{
-   try{localStorage.setItem('kalk2',json);}catch(e){}
-   showSaveStatus('✓ Gespeichert – '+new Date().toLocaleTimeString('de-DE'));
-  }).catch(e=>{
-   try{localStorage.setItem('kalk2',json);showSaveStatus('✓ Gespeichert (Fallback)');}
-   catch(e2){showSaveStatus('✗ Fehler: '+e2.message+' → Als Datei sichern!',false);}
-  });
- }catch(e){showSaveStatus('✗ Fehler: '+e.message,false);}
-}
-// ── Manuelles Laden ──
 function loadData(){
- _dbGet().then(json=>{
-  let d=json?JSON.parse(json):null;
-  if(!d){try{const r=localStorage.getItem('kalk2');if(r)d=JSON.parse(r);}catch(e){}}
+ dbLoad().then(d=>{
+  if(!d){
+   // Fallback: localStorage
+   try{const raw=localStorage.getItem('kalkAppData');if(raw)d=JSON.parse(raw);}catch(e){}
+  }
   if(!applyData(d)){showSaveStatus('✗ Kein Speicherstand gefunden',false);return;}
-  showSaveStatus('✓ Geladen – '+(d.savedAt?new Date(d.savedAt).toLocaleString('de-DE'):''));
+  const ts=d.savedAt?(' vom '+new Date(d.savedAt).toLocaleString('de-DE')):'';
+  showSaveStatus('✓ Geladen'+ts);
  }).catch(e=>{
-  try{const r=localStorage.getItem('kalk2');
-   if(r&&applyData(JSON.parse(r))){showSaveStatus('✓ Geladen (Fallback)');return;}
+  // Fallback: localStorage
+  try{
+   const raw=localStorage.getItem('kalkAppData');
+   if(raw&&applyData(JSON.parse(raw))){showSaveStatus('✓ Geladen (Fallback)');return;}
   }catch(e2){}
   showSaveStatus('✗ Ladefehler: '+e.message,false);
- });
-}
-// ── Auto-Load beim Start ──
-function autoLoad(){
- _dbGet().then(json=>{
-  let d=json?JSON.parse(json):null;
-  if(!d){try{const r=localStorage.getItem('kalk2');if(r)d=JSON.parse(r);}catch(e){}}
-  if(!d){return;} // Nichts gespeichert
-  if(applyData(d)){
-   showSaveStatus('✓ Daten geladen – '+(d.savedAt?new Date(d.savedAt).toLocaleString('de-DE'):''));
-  }
- }).catch(e=>{
-  try{const r=localStorage.getItem('kalk2');
-   if(r&&applyData(JSON.parse(r))){showSaveStatus('✓ Daten geladen (Fallback)');}
-  }catch(e2){}
  });
 }
 function getInputs(){let o={};document.querySelectorAll("input[id]").forEach(i=>{if(i.type!=="file")o[i.id]=i.value});return o}
@@ -669,4 +668,3 @@ function importJSON(ev){
  r.readAsText(f);
 }
 syncPayrollToBABAuto(true);renderEmployees();renderCostRows();renderCalcPositions();renderKFESearch();calcAll();calcGFRate();
-setTimeout(autoLoad,800);

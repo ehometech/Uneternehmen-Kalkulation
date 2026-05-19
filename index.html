@@ -216,6 +216,33 @@
         <button class="btn-secondary" onclick="syncPayrollToBAB()">🔄 Personal aktualisieren</button>
       </div>
 
+      <!-- GF Unternehmerlohn Block -->
+      <div class="card" style="border-left:4px solid var(--primary);background:var(--surface2)">
+        <div class="card-title" style="font-size:15px">👔 Kalkulatorischer Unternehmerlohn GF</div>
+        <div class="card-sub">Als Gesellschafter-GF ohne AG-SV → geht direkt in lohnunabhängige GK. Wird automatisch in den BAB übernommen.</div>
+        <div class="grid">
+          <div>
+            <label>Netto-Gehalt / Monat €</label>
+            <input id="gfNetMonthly" type="number" value="3000" oninput="updateGFBABRow()">
+          </div>
+          <div>
+            <label>PKV / Monat € (voller Beitrag)</label>
+            <input id="gfPKV" type="number" value="450" oninput="updateGFBABRow()">
+          </div>
+          <div>
+            <label>Sonstige GF-Kosten / Monat €</label>
+            <input id="gfExtra" type="number" value="0" oninput="updateGFBABRow()">
+            <div class="input-hint">z.B. Firmenhandy, Berufskleidung, etc.</div>
+          </div>
+        </div>
+        <div class="kpi-grid" style="margin-top:10px">
+          <div class="kpi-card"><div class="kpi-label">Gesamt / Monat</div><div class="kpi-val" id="gfBABMonthly">3.450,00 €</div></div>
+          <div class="kpi-card highlight"><div class="kpi-label">Kalkulatorischer Unternehmerlohn / Jahr → BAB</div><div class="kpi-val" id="gfBABYearly">41.400,00 €</div></div>
+        </div>
+      </div>
+      <div style="margin-top:-8px">
+      </div>
+
       <div class="scroll">
         <table>
           <thead>
