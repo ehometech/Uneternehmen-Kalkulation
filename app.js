@@ -544,7 +544,7 @@ function renderCalcPositions(){
 }
 function updCalcPos(id,k,v){let p=calcPositions.find(x=>x.id===id); if(!p) return; p[k]=['pos','kfe','name','unit'].includes(k)?v:num(v); calcAll();}
 function addCalcPosition(){const next=(calcPositions.reduce((m,p)=>Math.max(m,num(p.pos)),0)||0)+1; calcPositions.push({id:Date.now(),pos:next,kfe:'',name:'Neue Leistung',qty:1,unit:'m',matEk:0,minutes:0,cuPct:0,wastePct:0,machMin:0}); renderCalcPositions(); calcAll();}
-function calcPositionsTotals(minuteSell,mixedCost,matFactor,machMinuteSell,machHourCost){
+function calcPositionsTotals(minuteSell,mixedCost,matFactor,machMinuteSell,machHourCost,profitPct){
  return calcPositions.reduce((t,p)=>{
   const qty=num(p.qty)||0;
   const matUnit=num(p.matEk)*(1+num(p.wastePct)/100)*(1+num(p.cuPct)/100);
@@ -552,7 +552,8 @@ function calcPositionsTotals(minuteSell,mixedCost,matFactor,machMinuteSell,machH
   const mins=num(p.minutes)*qty;
   const machMins=num(p.machMin)*qty;
   t.materialEk+=matEk;
-  t.materialSell+=matEk*matFactor*(1+n('qMatProfit')/100);
+  // Material VK = EK × GK-Faktor × (1 + Material-Zusatzgewinn%) × (1 + allg. Gewinn%)
+  t.materialSell+=matEk*matFactor*(1+n('qMatProfit')/100)*(1+(profitPct||0)/100);
   t.laborMin+=mins;
   t.laborSell+=mins*minuteSell;
   t.laborCost+=mins/60*mixedCost;
@@ -568,12 +569,15 @@ function calcAll(){
  const groupTotals=groups.map(g=>{let rs=costRows.filter(r=>r.group===g);return{group:g,amount:rs.reduce((s,r)=>s+num(r.amount),0),installation:rs.reduce((s,r)=>s+num(r.amount)*num(r.installation)/100,0),verwaltung:rs.reduce((s,r)=>s+num(r.amount)*num(r.verwaltung)/100,0),material:rs.reduce((s,r)=>s+num(r.amount)*num(r.material)/100,0)}})
  const installBase=costRows.filter(r=>r.group==="Einzelkosten").reduce((s,r)=>s+num(r.amount)*num(r.installation)/100,0); const matBase=costRows.filter(r=>r.group==="Einzelkosten").reduce((s,r)=>s+num(r.amount)*num(r.material)/100,0); const lohngeb=(groupTotals.find(g=>g.group==="lohngebundene GK")||{}).installation||0; const lohnneb=(groupTotals.find(g=>g.group==="Lohnnebenkosten")||{}).installation||0; const lohnun=(groupTotals.find(g=>g.group==="lohnunabhängige GK")||{}).installation||0; const allGK=lohngeb+lohnneb+lohnun; const overheadPct=installBase?(allGK/installBase*100):0;
  renderZuschlagTable(groupTotals, installBase, matBase);
- const hourly=mixed+(mixed*overheadPct/100); const hourlyProfit=hourly*(1+n("profit")/100); const minute=hourlyProfit/60; const mf=n("matFactor")*(1+n("matProfit")/100); const matSell=n("matCost")*mf; const labor=n("minutes")*minute; const bab=n("productiveHours")?(installBase+allGK)/n("productiveHours"):0;
+ const hourly=mixed+(mixed*overheadPct/100); const hourlyProfit=hourly*(1+n("profit")/100); const minute=hourlyProfit/60;
+ // Materialfaktor: GK-Faktor × (1 + Material-Zusatzgewinn%) × (1 + allg. Gewinn%)
+ const mf=n("matFactor")*(1+n("matProfit")/100)*(1+n("profit")/100);
+ const matSell=n("matCost")*mf; const labor=n("minutes")*minute; const bab=n("productiveHours")?(installBase+allGK)/n("productiveHours"):0;
  document.getElementById("hourlyRate").textContent=eur(hourlyProfit)+"/Std."; document.getElementById("minuteRate").textContent=eur(minute)+"/min"; document.getElementById("mixedWage").textContent=eur(mixed); document.getElementById("payrollTotal").textContent=eur(totalPayroll); document.getElementById("payrollProductive").textContent=totalProductive.toLocaleString('de-DE',{maximumFractionDigits:1})+" h"; document.getElementById("matSurcharge").textContent=pct((mf-1)*100); document.getElementById("babHourly").textContent=eur(bab)+"/Std."; document.getElementById("laborPrice").textContent=eur(labor); document.getElementById("matSell").textContent=eur(matSell); document.getElementById("totalPrice").textContent=eur(labor+matSell); groupTotals.forEach((g,i)=>{const el=document.getElementById("g"+i);if(el)el.innerHTML=`Installation: ${eur(g.installation)}<br>Verwaltung: ${eur(g.verwaltung)}<br>Material: ${eur(g.material)}`;})
  const veh=syncVehicleToBAB(); setText("vehDep",eur(veh.dep)); setText("shelfDep",eur(veh.shelf)); setText("vehFixedYear",eur(veh.fixed)); setText("vehVariableYear",eur(veh.variableYear)); setText("vehTotalYear",eur(veh.totalYear)+" (separat)"); setText("vehKmFull",eur(veh.fullKm)+"/km"); setText("vehKmYear",veh.kmYear.toLocaleString('de-DE',{maximumFractionDigits:0})+" km"); setText("vehFixedKm",eur(veh.fixedKm)+"/km"); setText("vehVarKm",eur(veh.varKm)+"/km"); setText("vehDayCost",eur(veh.dayCost)+"/Tag"); setText("vehHourCost",eur(veh.hourCost)+"/h");
  const mDep=(n("machPurchase")-n("machRest"))/(n("machYears")||1); const mFixed=mDep+n("machServiceYear")+n("machInsuranceYear")+n("machFinanceYear"); const mFixedHour=n("machHoursYear")?mFixed/n("machHoursYear"):0; const mVarHour=n("machEnergyHour")+n("machConsumablesHour")+n("machRepairHour"); const mInternalHour=mFixedHour+mVarHour; const mSellHour=mInternalHour*(1+n("machProfit")/100); const mMin=mSellHour/60; setText("machDep",eur(mDep)); setText("machFixedYear",eur(mFixed)); setText("machFixedHour",eur(mFixedHour)+"/h"); setText("machVarHour",eur(mVarHour)+"/h"); setText("machHour",eur(mSellHour)+"/h"); setText("machMinute",eur(mMin)+"/min");
  const qMatFactor=n("qMatFactor")||n("matFactor")||1;
- const posTotals=calcPositionsTotals(minute,mixed,qMatFactor,mMin,mInternalHour);
+ const posTotals=calcPositionsTotals(minute,mixed,qMatFactor,mMin,mInternalHour,n("profit"));
  const vq=calcVehicleQuote(); const qVehicleCost=vq.costTotal; const qVehicleSell=vq.costTotal; setText("qVehKmRate",eur(vq.fullKm)+"/km"); setText("qVehDayRate",eur(vq.dayCost)+"/Tag"); setText("qVehCostKm",eur(vq.costKm)); setText("qVehCostDay",eur(vq.costDay)); setText("qVehTotal",eur(vq.costTotal)); setText("qVehTotal2",eur(vq.costTotal));
  const qOther=n("qOther"); const qRiskPct=n("qRiskPct"); const qDiscountPct=n("qDiscountPct");
  const qSub=posTotals.materialSell+posTotals.laborSell+posTotals.machineSell+qVehicleSell+qOther;
@@ -724,23 +728,3 @@ function importJSON(ev){
  r.readAsText(f);
 }
 syncPayrollToBABAuto(true);renderEmployees();renderCostRows();renderCalcPositions();renderKFESearch();calcAll();calcGFRate();
-
-// Debounced Auto-Save: speichert automatisch 2s nach jeder Änderung
-let _autoSaveTimer = null;
-function autoSave(){
-  clearTimeout(_autoSaveTimer);
-  _autoSaveTimer = setTimeout(()=>{
-    try{
-      const data = buildSaveData();
-      dbSave(data).catch(()=>{
-        try{localStorage.setItem('kalkAppData_v3',JSON.stringify(data));}catch(e){}
-      });
-    }catch(e){}
-  }, 2000);
-}
-// calcAll patchen um autoSave zu triggern
-const _origCalcAll = calcAll;
-window.calcAll = function(){
-  _origCalcAll();
-  autoSave();
-};
