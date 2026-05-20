@@ -785,6 +785,28 @@
       <button class="btn-primary" onclick="doChangeEmail()">📧 E-Mail ändern</button>
     </div>
 
+    <div class="settings-group">
+      <div class="settings-group-title">⏱ Automatische Abmeldung</div>
+      <div class="settings-group-sub">Legt fest, nach wie vielen Minuten Inaktivität du automatisch abgemeldet wirst. 0 = nie abmelden.</div>
+      <div id="settingsTimeoutSuccess" class="login-success"></div>
+      <div style="max-width:300px">
+        <div class="login-field">
+          <label>Inaktivitäts-Timeout (Minuten)</label>
+          <select id="settingsTimeout" onchange="doSaveTimeout()">
+            <option value="0">Nie automatisch abmelden</option>
+            <option value="15">15 Minuten</option>
+            <option value="30" selected>30 Minuten (Standard)</option>
+            <option value="60">1 Stunde</option>
+            <option value="120">2 Stunden</option>
+            <option value="240">4 Stunden</option>
+          </select>
+        </div>
+      </div>
+      <div class="info-box" style="margin-top:8px">
+        💡 Bei <b>Seitenaktualisierung (F5)</b> bleibst du automatisch eingeloggt – solange der Browser-Tab offen bleibt. Beim <b>Schließen des Browsers</b> wird die Session beendet.
+      </div>
+    </div>
+
     <div class="settings-group" style="border-color:#fca5a5;background:#fef2f2">
       <div class="settings-group-title" style="color:#7f1d1d">⚠ Login zurücksetzen</div>
       <div class="settings-group-sub">Löscht alle Login-Daten. Beim nächsten Start kann ein neues Konto angelegt werden. App-Daten bleiben erhalten.</div>
@@ -798,6 +820,19 @@
 <script src="kfe-db.js?v=12"></script>
 <script src="app.js?v=12"></script>
 <script>
+function doSaveTimeout(){
+  const mins = parseInt(document.getElementById('settingsTimeout').value)||30;
+  const auth = getAuth();
+  if(auth){
+    saveAuth({...auth, timeoutMin: mins});
+    resetInactivityTimer();
+    const okEl = document.getElementById('settingsTimeoutSuccess');
+    okEl.innerHTML = mins===0 ? '✓ Automatische Abmeldung deaktiviert.' : `✓ Timeout gesetzt: ${mins} Minuten.`;
+    okEl.style.display='block';
+    setTimeout(()=>{okEl.style.display='none';}, 3000);
+  }
+}
+
 // ===== showSection =====
 function showSection(id, btn){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
@@ -818,6 +853,14 @@ function showSection(id, btn){
     const a=getAuth();
     const el=document.getElementById('settingsEmailDisplay');
     if(el&&a) el.value=a.email||'';
+    // Timeout-Dropdown aktuell setzen
+    const timeoutSel = document.getElementById('settingsTimeout');
+    if(timeoutSel && a) {
+      const saved = a.timeoutMin !== undefined ? String(a.timeoutMin) : '30';
+      // Nächste passende Option wählen
+      const opt = timeoutSel.querySelector(`option[value="${saved}"]`);
+      if(opt) timeoutSel.value = saved;
+    }
   }
 }
 if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
@@ -833,15 +876,21 @@ window.addEventListener('beforeunload', ()=>{
 });
 
 window.addEventListener('DOMContentLoaded', ()=>{
-  dbLoad().then(d=>{
-    const el=document.getElementById('saveStatus');
-    if(d&&d.v&&el){
-      const ts=d.savedAt?(' vom '+new Date(d.savedAt).toLocaleString('de-DE')):'';
-      el.textContent='💡 Speicherstand vorhanden'+ts+' – „Laden" klicken';
-      el.style.background='var(--blue-bg)';el.style.borderColor='var(--blue-border)';
-      el.style.color='var(--blue)';el.style.display='inline';
-    }
-  }).catch(()=>{});
+  // Speicherstand-Hinweis nur zeigen wenn kein Auto-Login stattfindet
+  const session = (() => { try{ return JSON.parse(sessionStorage.getItem('kalk_session_v1')); }catch{ return null; } })();
+  const auth = (() => { try{ return JSON.parse(localStorage.getItem('kalk_auth_v1')); }catch{ return null; } })();
+  const hasAutoLogin = session && auth && session.email === auth.email;
+  if(!hasAutoLogin){
+    dbLoad().then(d=>{
+      const el=document.getElementById('saveStatus');
+      if(d&&d.v&&el){
+        const ts=d.savedAt?(' vom '+new Date(d.savedAt).toLocaleString('de-DE')):'';
+        el.textContent='💡 Speicherstand vorhanden'+ts+' – „Laden" klicken';
+        el.style.background='var(--blue-bg)';el.style.borderColor='var(--blue-border)';
+        el.style.color='var(--blue)';el.style.display='inline';
+      }
+    }).catch(()=>{});
+  }
 });
 
 // ===== AUTH SYSTEM =====
@@ -901,13 +950,21 @@ async function doLogin(){
 
 function unlockApp(email){
   _appUnlocked = true;
+  saveSession(email);
   document.getElementById('loginOverlay').style.display='none';
   const el=document.getElementById('settingsEmailDisplay');
   if(el) el.value=email;
+  // App-Daten nach Login laden
+  setTimeout(()=>{
+    loadData();
+    resetInactivityTimer();
+  }, 100);
 }
 function doLogout(){
   if(!confirm('Wirklich abmelden?'))return;
   _appUnlocked = false;
+  if(_inactivityTimer) clearTimeout(_inactivityTimer);
+  clearSession();
   document.getElementById('loginOverlay').style.display='flex';
   showLoginView('viewLogin');
   document.getElementById('loginPassword').value='';
@@ -1002,18 +1059,93 @@ function doResetAccount(){
   location.reload();
 }
 
-// Startup – einmalig beim Laden der Seite
+// ===== SESSION & AUTO-LOGOUT =====
+const SESSION_KEY = 'kalk_session_v1';
+const ACTIVITY_KEY = 'kalk_last_activity';
 let _appUnlocked = false;
+let _inactivityTimer = null;
 
+// Session speichern (beim Login)
+function saveSession(email){
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify({email, ts: Date.now()}));
+  localStorage.setItem(ACTIVITY_KEY, Date.now().toString());
+}
+// Session lesen
+function getSession(){
+  try{ return JSON.parse(sessionStorage.getItem(SESSION_KEY))||null; }catch{ return null; }
+}
+// Session löschen
+function clearSession(){
+  sessionStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem(ACTIVITY_KEY);
+}
+
+// Aktivität registrieren (Maus, Tastatur, Touch)
+function touchActivity(){
+  if(!_appUnlocked) return;
+  localStorage.setItem(ACTIVITY_KEY, Date.now().toString());
+  resetInactivityTimer();
+}
+['mousemove','keydown','mousedown','touchstart','scroll'].forEach(ev=>{
+  document.addEventListener(ev, touchActivity, {passive:true});
+});
+
+// Auto-Logout Timer
+function getTimeoutMinutes(){
+  const s = getAuth();
+  return (s && s.timeoutMin) ? parseInt(s.timeoutMin) : 30; // default 30 Min
+}
+function resetInactivityTimer(){
+  if(_inactivityTimer) clearTimeout(_inactivityTimer);
+  const mins = getTimeoutMinutes();
+  if(mins === 0) return; // 0 = deaktiviert
+  _inactivityTimer = setTimeout(()=>{
+    if(_appUnlocked){
+      _appUnlocked = false;
+      clearSession();
+      document.getElementById('loginOverlay').style.display='flex';
+      showLoginView('viewLogin');
+      document.getElementById('loginPassword').value='';
+      showMsg('loginError','Automatisch abgemeldet nach '+mins+' Minuten Inaktivität.');
+    }
+  }, mins * 60 * 1000);
+}
+
+// Startup – einmalig beim Laden der Seite
 (function initAuth(){
-  const auth=getAuth();
-  const overlay=document.getElementById('loginOverlay');
+  const auth = getAuth();
+  const overlay = document.getElementById('loginOverlay');
+
+  // Erster Start: kein Account
   if(!auth){
-    const link=document.querySelector('#viewLogin .login-link');
+    const link = document.querySelector('#viewLogin .login-link');
     if(link) link.innerHTML='<span style="color:var(--muted);font-size:12px">Erster Start: E-Mail & Passwort frei wählen</span>';
+    overlay.style.display='flex';
+    return;
   }
-  const emailEl=document.getElementById('settingsEmailDisplay');
-  if(emailEl&&auth) emailEl.value=auth.email||'';
+
+  // Session noch aktiv? (selbe Browser-Sitzung)
+  const session = getSession();
+  if(session && session.email === auth.email){
+    // Direkt einloggen ohne Passwort
+    _appUnlocked = true;
+    overlay.style.display='none';
+    const emailEl = document.getElementById('settingsEmailDisplay');
+    if(emailEl) emailEl.value = auth.email||'';
+    // App-Daten automatisch laden
+    setTimeout(()=>{
+      loadData();
+      resetInactivityTimer();
+    }, 100);
+    return;
+  }
+
+  // Kein aktive Session → Login erforderlich
+  const emailEl = document.getElementById('settingsEmailDisplay');
+  if(emailEl) emailEl.value = auth.email||'';
+  // E-Mail vorausfüllen für Komfort
+  const loginEmailEl = document.getElementById('loginEmail');
+  if(loginEmailEl && auth.email) loginEmailEl.value = auth.email;
   overlay.style.display='flex';
 })();
 </script>

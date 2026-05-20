@@ -724,3 +724,23 @@ function importJSON(ev){
  r.readAsText(f);
 }
 syncPayrollToBABAuto(true);renderEmployees();renderCostRows();renderCalcPositions();renderKFESearch();calcAll();calcGFRate();
+
+// Debounced Auto-Save: speichert automatisch 2s nach jeder Änderung
+let _autoSaveTimer = null;
+function autoSave(){
+  clearTimeout(_autoSaveTimer);
+  _autoSaveTimer = setTimeout(()=>{
+    try{
+      const data = buildSaveData();
+      dbSave(data).catch(()=>{
+        try{localStorage.setItem('kalkAppData_v3',JSON.stringify(data));}catch(e){}
+      });
+    }catch(e){}
+  }, 2000);
+}
+// calcAll patchen um autoSave zu triggern
+const _origCalcAll = calcAll;
+window.calcAll = function(){
+  _origCalcAll();
+  autoSave();
+};
