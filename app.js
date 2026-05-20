@@ -16,7 +16,7 @@ let costRows=[
  {id:1001,group:"Einzelkosten",name:"Fremdleistungen / Subunternehmer",amount:1296.14,calc:"aus CSV 2025: Fremdleistungen §13b, Fremdleistungen §13b Drittland, Subunternehmer",installation:100,verwaltung:0,material:0},
  {id:1002,group:"Einzelkosten",name:"Lohn/Gehalt aus Buchhaltung - prüfen",amount:1475.34,calc:"aus CSV 2025: Verrechnung Lohn/Gehalt",installation:100,verwaltung:0,material:0},
  {id:1003,group:"Einzelkosten",name:"Materialverbrauch / Materialverkauf",amount:57616.58,calc:"aus CSV 2025: Innergemeinschaftlicher Erwerb, Material/Waren, Materialeinkauf",installation:0,verwaltung:0,material:100},
- {id:1004,group:"Lohnnebenkosten",name:"Sozialversicherung Beiträge",amount:1504.27,calc:"aus CSV 2025: Sozialversicherungsbeiträge",installation:100,verwaltung:0,material:0},
+ {id:1004,group:"lohngebundene GK",name:"Sozialversicherung Beiträge (Buchhaltung)",amount:1504.27,calc:"aus CSV 2025: Sozialversicherungsbeiträge",installation:100,verwaltung:0,material:0},
  {id:1005,group:"lohnunabhängige GK",name:"Anschaffungen / Abschreibung prüfen",amount:888.06,calc:"aus CSV 2025: Anschaffungen",installation:50,verwaltung:30,material:20},
  {id:1006,group:"lohnunabhängige GK",name:"Bankgebühren",amount:92.0,calc:"aus CSV 2025: Nebenkosten des Geldverkehrs",installation:0,verwaltung:100,material:0},
  {id:1007,group:"lohnunabhängige GK",name:"Beiträge / Kammer / Verband",amount:506.0,calc:"aus CSV 2025: Beiträge",installation:10,verwaltung:90,material:0},
@@ -566,10 +566,10 @@ function calcPositionsTotals(minuteSell,mixedCost,matFactor,machMinuteSell,machH
 function calcAll(){
  const empResults=employees.map(e=>e.type==="apprentice"?calcApprenticeCost(e):calcEmployeeCost(e)); const totalProductive=empResults.reduce((s,r)=>s+r.productiveHours,0); const totalPayroll=empResults.reduce((s,r)=>s+r.total,0); const mixed=totalProductive?totalPayroll/totalProductive:0; syncPayrollToBABAuto(true); syncVehicleToBAB();
  const groupTotals=groups.map(g=>{let rs=costRows.filter(r=>r.group===g);return{group:g,amount:rs.reduce((s,r)=>s+num(r.amount),0),installation:rs.reduce((s,r)=>s+num(r.amount)*num(r.installation)/100,0),verwaltung:rs.reduce((s,r)=>s+num(r.amount)*num(r.verwaltung)/100,0),material:rs.reduce((s,r)=>s+num(r.amount)*num(r.material)/100,0)}})
- const installBase=costRows.filter(r=>r.group==="Einzelkosten").reduce((s,r)=>s+num(r.amount)*num(r.installation)/100,0); const matBase=costRows.filter(r=>r.group==="Einzelkosten").reduce((s,r)=>s+num(r.amount)*num(r.material)/100,0); const lohngeb=(groupTotals.find(g=>g.group==="lohngebundene GK")||{}).installation||0; const lohnneb=(groupTotals.find(g=>g.group==="Lohnnebenkosten")||{}).installation||0; const lohnun=(groupTotals.find(g=>g.group==="lohnunabhängige GK")||{}).installation||0; const overheadPct=installBase?((lohngeb+lohnneb+lohnun)/installBase*100):0;
+ const installBase=costRows.filter(r=>r.group==="Einzelkosten").reduce((s,r)=>s+num(r.amount)*num(r.installation)/100,0); const matBase=costRows.filter(r=>r.group==="Einzelkosten").reduce((s,r)=>s+num(r.amount)*num(r.material)/100,0); const lohngeb=(groupTotals.find(g=>g.group==="lohngebundene GK")||{}).installation||0; const lohnneb=(groupTotals.find(g=>g.group==="Lohnnebenkosten")||{}).installation||0; const lohnun=(groupTotals.find(g=>g.group==="lohnunabhängige GK")||{}).installation||0; const allGK=lohngeb+lohnneb+lohnun; const overheadPct=installBase?(allGK/installBase*100):0;
  renderZuschlagTable(groupTotals, installBase, matBase);
- const hourly=mixed+(mixed*overheadPct/100); const hourlyProfit=hourly*(1+n("profit")/100); const minute=hourlyProfit/60; const mf=n("matFactor")*(1+n("matProfit")/100); const matSell=n("matCost")*mf; const labor=n("minutes")*minute; const bab=n("productiveHours")?(installBase+lohngeb+lohnneb+lohnun)/n("productiveHours"):0;
- document.getElementById("hourlyRate").textContent=eur(hourlyProfit)+"/Std."; document.getElementById("minuteRate").textContent=eur(minute)+"/min"; document.getElementById("mixedWage").textContent=eur(mixed); document.getElementById("payrollTotal").textContent=eur(totalPayroll); document.getElementById("payrollProductive").textContent=totalProductive.toLocaleString('de-DE',{maximumFractionDigits:1})+" h"; document.getElementById("matSurcharge").textContent=pct((mf-1)*100); document.getElementById("babHourly").textContent=eur(bab)+"/Std."; document.getElementById("laborPrice").textContent=eur(labor); document.getElementById("matSell").textContent=eur(matSell); document.getElementById("totalPrice").textContent=eur(labor+matSell); groupTotals.forEach((g,i)=>document.getElementById("g"+i).innerHTML=`Installation: ${eur(g.installation)}<br>Verwaltung: ${eur(g.verwaltung)}<br>Material: ${eur(g.material)}`)
+ const hourly=mixed+(mixed*overheadPct/100); const hourlyProfit=hourly*(1+n("profit")/100); const minute=hourlyProfit/60; const mf=n("matFactor")*(1+n("matProfit")/100); const matSell=n("matCost")*mf; const labor=n("minutes")*minute; const bab=n("productiveHours")?(installBase+allGK)/n("productiveHours"):0;
+ document.getElementById("hourlyRate").textContent=eur(hourlyProfit)+"/Std."; document.getElementById("minuteRate").textContent=eur(minute)+"/min"; document.getElementById("mixedWage").textContent=eur(mixed); document.getElementById("payrollTotal").textContent=eur(totalPayroll); document.getElementById("payrollProductive").textContent=totalProductive.toLocaleString('de-DE',{maximumFractionDigits:1})+" h"; document.getElementById("matSurcharge").textContent=pct((mf-1)*100); document.getElementById("babHourly").textContent=eur(bab)+"/Std."; document.getElementById("laborPrice").textContent=eur(labor); document.getElementById("matSell").textContent=eur(matSell); document.getElementById("totalPrice").textContent=eur(labor+matSell); groupTotals.forEach((g,i)=>{const el=document.getElementById("g"+i);if(el)el.innerHTML=`Installation: ${eur(g.installation)}<br>Verwaltung: ${eur(g.verwaltung)}<br>Material: ${eur(g.material)}`;})
  const veh=syncVehicleToBAB(); setText("vehDep",eur(veh.dep)); setText("shelfDep",eur(veh.shelf)); setText("vehFixedYear",eur(veh.fixed)); setText("vehVariableYear",eur(veh.variableYear)); setText("vehTotalYear",eur(veh.totalYear)+" (separat)"); setText("vehKmFull",eur(veh.fullKm)+"/km"); setText("vehKmYear",veh.kmYear.toLocaleString('de-DE',{maximumFractionDigits:0})+" km"); setText("vehFixedKm",eur(veh.fixedKm)+"/km"); setText("vehVarKm",eur(veh.varKm)+"/km"); setText("vehDayCost",eur(veh.dayCost)+"/Tag"); setText("vehHourCost",eur(veh.hourCost)+"/h");
  const mDep=(n("machPurchase")-n("machRest"))/(n("machYears")||1); const mFixed=mDep+n("machServiceYear")+n("machInsuranceYear")+n("machFinanceYear"); const mFixedHour=n("machHoursYear")?mFixed/n("machHoursYear"):0; const mVarHour=n("machEnergyHour")+n("machConsumablesHour")+n("machRepairHour"); const mInternalHour=mFixedHour+mVarHour; const mSellHour=mInternalHour*(1+n("machProfit")/100); const mMin=mSellHour/60; setText("machDep",eur(mDep)); setText("machFixedYear",eur(mFixed)); setText("machFixedHour",eur(mFixedHour)+"/h"); setText("machVarHour",eur(mVarHour)+"/h"); setText("machHour",eur(mSellHour)+"/h"); setText("machMinute",eur(mMin)+"/min");
  const qMatFactor=n("qMatFactor")||n("matFactor")||1;
@@ -591,7 +591,7 @@ function calcAll(){
  const dbAmount=dbPriceLower-dbVarMat-dbVarLabor;
  const dbAnnualQty=n("dbAnnualQty")||1;
  const dbAmountYear=dbAmount*dbAnnualQty;
- const dbFixedManual=n("dbFixedManual"); const dbFixedAuto=lohngeb+lohnneb+lohnun; const dbFixed=dbFixedManual>0?dbFixedManual:dbFixedAuto;
+ const dbFixedManual=n("dbFixedManual"); const dbFixedAuto=allGK; const dbFixed=dbFixedManual>0?dbFixedManual:dbFixedAuto;
  const dbActual=dbFixed?dbAmountYear/dbFixed*100:0; const dbTarget=n("dbTargetPct");
  setText("dbLaborSingle",eur(dbLaborSingle)); setText("dbMaterial",eur(dbMaterial)); setText("dbSelf",eur(dbSelf)); setText("dbPriceLower",eur(dbPriceLower)); setText("dbVarMat",eur(dbVarMat)); setText("dbVarLabor",eur(dbVarLabor)); setText("dbAmount",eur(dbAmount)); setText("dbAmountYear",eur(dbAmountYear)); setText("dbFixed",eur(dbFixed)); setText("dbActual",pct(dbActual)); setText("dbStatus",dbActual>=dbTarget?"Ja":"Nein");
  // Personalkostenanteil (Perko perko_pgk Logik)
@@ -620,7 +620,7 @@ function showSaveStatus(msg,ok=true){
  el._t=setTimeout(()=>el.style.display='none',4000);
 }
 function buildSaveData(){
- return {employees,costRows,calcPositions,inputs:getInputs(),kfeCustomDb:readCustomKFE(),savedAt:new Date().toISOString()};
+ return {v:3,employees,costRows,calcPositions,inputs:getInputs(),kfeCustomDb:readCustomKFE(),savedAt:new Date().toISOString()};
 }
 // IndexedDB wrapper – funktioniert bei file:// und http:// zuverlässig
 const DB_NAME='kalkApp',DB_STORE='data',DB_KEY='main';
@@ -651,23 +651,26 @@ function dbLoad(){
 function saveData(){
  const data=buildSaveData();
  dbSave(data).then(()=>{
+  // Auch localStorage als Backup
+  try{localStorage.setItem('kalkAppData_v3',JSON.stringify(data));}catch(e){}
   showSaveStatus('✓ Gespeichert – '+new Date().toLocaleTimeString('de-DE'));
  }).catch(e=>{
-  // Fallback localStorage
-  try{localStorage.setItem('kalkAppData',JSON.stringify(data));showSaveStatus('✓ Gespeichert (localStorage Fallback)');}
-  catch(e2){showSaveStatus('✗ Fehler: '+e.message+' – bitte "Als Datei sichern" nutzen!',false);}
+  try{localStorage.setItem('kalkAppData_v3',JSON.stringify(data));showSaveStatus('✓ Gespeichert (localStorage)');}
+  catch(e2){showSaveStatus('✗ Fehler: '+e.message,false);}
  });
 }
 function loadData(){
  dbLoad().then(d=>{
   if(!d){
-   // try localStorage fallback
-   try{const raw=localStorage.getItem('kalkAppData');if(raw)d=JSON.parse(raw);}catch(e){}
+   try{
+    const raw=localStorage.getItem('kalkAppData_v3')||localStorage.getItem('kalkAppData');
+    if(raw)d=JSON.parse(raw);
+   }catch(e){}
   }
   if(!d){showSaveStatus('✗ Kein Speicherstand gefunden',false);return;}
-  employees=d.employees||employees;
-  costRows=d.costRows||costRows;
-  calcPositions=d.calcPositions||calcPositions;
+  if(d.employees)employees=d.employees;
+  if(d.costRows)costRows=d.costRows;
+  if(d.calcPositions)calcPositions=d.calcPositions;
   if(d.kfeCustomDb)saveCustomKFE(d.kfeCustomDb);
   setInputs(d.inputs||{});
   renderEmployees();renderCostRows();renderCalcPositions();renderKFESearch();calcAll();
@@ -675,8 +678,24 @@ function loadData(){
   showSaveStatus('✓ Geladen'+ts);
  }).catch(e=>showSaveStatus('✗ Ladefehler: '+e.message,false));
 }
-function getInputs(){let o={};document.querySelectorAll("input[id]").forEach(i=>{if(i.type!=="file")o[i.id]=i.value});return o}
-function setInputs(o){Object.entries(o).forEach(([k,v])=>{let el=document.getElementById(k);if(el)el.value=v})}
+function getInputs(){
+ const EXCLUDE=['loginEmail','loginPassword','forgotEmail','resetEmail','resetCode','resetNewPw',
+  'settingsCurrentPw','settingsNewPw','settingsConfirmPw','settingsNewEmail','settingsEmailPw','settingsEmailDisplay'];
+ let o={};
+ document.querySelectorAll("input[id]").forEach(i=>{
+  if(i.type!=="file" && !EXCLUDE.includes(i.id)) o[i.id]=i.value;
+ });
+ return o;
+}
+function setInputs(o){
+ const EXCLUDE=['loginEmail','loginPassword','forgotEmail','resetEmail','resetCode','resetNewPw',
+  'settingsCurrentPw','settingsNewPw','settingsConfirmPw','settingsNewEmail','settingsEmailPw','settingsEmailDisplay'];
+ Object.entries(o).forEach(([k,v])=>{
+  if(EXCLUDE.includes(k)) return;
+  let el=document.getElementById(k);
+  if(el) el.value=v;
+ });
+}
 function exportJSON(){
  try{
   const blob=new Blob([JSON.stringify(buildSaveData(),null,2)],{type:"application/json"});
