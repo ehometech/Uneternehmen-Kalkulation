@@ -13,7 +13,6 @@ let costRows=[
  {id:21,auto:"productiveApprentice",group:"Einzelkosten",name:"Fertigungskosten produktive Lehrlinge",amount:16800,calc:"automatisch aus Lehrlingen",installation:100,verwaltung:0,material:0},
  {id:19,auto:"unproductivePayroll",group:"lohnunabhängige GK",name:"kalkulatorische unprod. Mitarbeiterkosten",amount:18000,calc:"automatisch aus Personal",installation:70,verwaltung:30,material:0},
  {id:20,auto:"unproductiveApprentice",group:"lohnunabhängige GK",name:"kalkulatorische unprod. Lehrlingskosten",amount:6000,calc:"automatisch aus Lehrlingen",installation:70,verwaltung:30,material:0},
- {id:9001,group:"lohnunabhängige GK",name:"Kalkulatorischer Unternehmerlohn GF (Netto + PKV)",amount:41400,calc:"3.000 € Netto/Monat + 450 € PKV = 3.450 €/Monat × 12",installation:100,verwaltung:0,material:0},
  {id:1001,group:"Einzelkosten",name:"Fremdleistungen / Subunternehmer",amount:1296.14,calc:"aus CSV 2025: Fremdleistungen §13b, Fremdleistungen §13b Drittland, Subunternehmer",installation:100,verwaltung:0,material:0},
  {id:1002,group:"Einzelkosten",name:"Lohn/Gehalt aus Buchhaltung - prüfen",amount:1475.34,calc:"aus CSV 2025: Verrechnung Lohn/Gehalt",installation:100,verwaltung:0,material:0},
  {id:1003,group:"Einzelkosten",name:"Materialverbrauch / Materialverkauf",amount:57616.58,calc:"aus CSV 2025: Innergemeinschaftlicher Erwerb, Material/Waren, Materialeinkauf",installation:0,verwaltung:0,material:100},
@@ -255,22 +254,6 @@ function calcGFRate(){
  setText("gfMinRate",eur(minRate)+"/min");
 }
 
-function updateGFBABRow(){
- const monthly=(n("gfNetMonthly")||3000)+(n("gfPKV")||450)+(n("gfExtra")||0);
- const yearly=monthly*12;
- setText("gfBABMonthly",eur(monthly));
- setText("gfBABYearly",eur(yearly)+" → BAB");
- // Update the BAB row
- const r=costRows.find(x=>x.id===9001);
- if(r){
-  r.amount=round2(yearly);
-  r.calc=(n("gfNetMonthly")||3000)+" € Netto + "+(n("gfPKV")||450)+" € PKV"+(n("gfExtra")?" + "+n("gfExtra")+" € Sonstiges":"")+"/Monat × 12";
-  const el=document.getElementById("rowAmount_9001");
-  if(el&&document.activeElement!==el)el.value=round2(yearly);
- }
- autoSave();
- calcAll();
-}
 function syncPayrollToBABAuto(updateProductiveHours=true){
  const s=payrollBABSplit();
  // Einzelkosten – produktive Lohnkosten
@@ -293,6 +276,77 @@ function syncPayrollToBAB(){syncPayrollToBABAuto(true); renderCostRows(); calcAl
 
 
 function setText(id,value){const el=document.getElementById(id); if(el) el.textContent=value;}
+
+function renderZuschlagTable(groupTotals, installBase, matBase){
+  const body=document.getElementById('zuschlagBody');
+  const foot=document.getElementById('zuschlagFoot');
+  if(!body||!foot) return;
+
+  const p2=(v)=>Number(v||0).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' %';
+  const pct=(val,base)=>base?p2(val/base*100):p2(0);
+
+  // Gruppen die als Zuschlag relevant sind (nicht Einzelkosten selbst)
+  const zuschlagGruppen=[
+    {key:'lohngebundene GK',    label:'Lohngebundene GK (SV, BG, EFG)', color:'#1e3a5f'},
+    {key:'Lohnnebenkosten',     label:'Lohnnebenkosten',                 color:'#7a4e00'},
+    {key:'lohnunabhängige GK',  label:'Lohnunabhängige GK',             color:'#1a4a1a'},
+  ];
+
+  let totalInst=0, totalVerw=0, totalMat=0, totalAmt=0;
+
+  const rows=zuschlagGruppen.map(def=>{
+    const g=groupTotals.find(x=>x.group===def.key)||{amount:0,installation:0,verwaltung:0,material:0};
+    totalInst+=g.installation; totalVerw+=g.verwaltung; totalMat+=g.material; totalAmt+=g.amount;
+    return `<tr>
+      <td><span style="display:inline-block;width:10px;height:10px;background:${def.color};border-radius:2px;margin-right:6px"></span><b>${def.label}</b></td>
+      <td class="right mono">${eur(g.amount)}</td>
+      <td class="right mono">${eur(g.installation)}</td>
+      <td class="right mono" style="font-weight:700;color:var(--accent)">${pct(g.installation,installBase)}</td>
+      <td class="right mono">${eur(g.verwaltung)}</td>
+      <td class="right mono" style="font-weight:700;color:var(--blue)">${pct(g.verwaltung,installBase)}</td>
+      <td class="right mono">${eur(g.material)}</td>
+      <td class="right mono" style="font-weight:700;color:var(--amber)">${pct(g.material,matBase)}</td>
+    </tr>`;
+  }).join('');
+
+  // Materialzuschlag-Zeile (aus matFactor)
+  const mf=n("matFactor")||1;
+  const matZuschlagPct=(mf-1)*100;
+  const matZuschlagRow=`<tr style="background:var(--amber-bg)">
+    <td><span style="display:inline-block;width:10px;height:10px;background:var(--amber);border-radius:2px;margin-right:6px"></span><b>Materialkostenzuschlag (Faktor)</b></td>
+    <td class="right mono" colspan="2"><span class="muted small">Faktor: ${mf.toLocaleString('de-DE',{minimumFractionDigits:4,maximumFractionDigits:4})}</span></td>
+    <td class="right mono" style="font-weight:700;color:var(--accent)">—</td>
+    <td class="right mono" colspan="2">—</td>
+    <td class="right mono" colspan="1">—</td>
+    <td class="right mono" style="font-weight:700;color:var(--amber)">${p2(matZuschlagPct)}</td>
+  </tr>`;
+
+  body.innerHTML=rows+matZuschlagRow;
+
+  // Gewinnzuschlag
+  const profitPct=n("profit")||0;
+
+  foot.innerHTML=`
+    <tr style="background:var(--surface2);border-top:2px solid var(--border)">
+      <td><b>∑ Gemeinkosten gesamt</b></td>
+      <td class="right mono"><b>${eur(totalAmt)}</b></td>
+      <td class="right mono"><b>${eur(totalInst)}</b></td>
+      <td class="right mono" style="font-weight:700;font-size:15px;color:var(--accent)">${pct(totalInst,installBase)}</td>
+      <td class="right mono"><b>${eur(totalVerw)}</b></td>
+      <td class="right mono" style="font-weight:700;font-size:15px;color:var(--blue)">${pct(totalVerw,installBase)}</td>
+      <td class="right mono"><b>${eur(totalMat)}</b></td>
+      <td class="right mono" style="font-weight:700;font-size:15px;color:var(--amber)">${pct(totalMat,matBase)}</td>
+    </tr>
+    <tr style="background:var(--green-bg);border-top:1px solid var(--green-border)">
+      <td><b>+ Gewinnzuschlag</b></td>
+      <td class="right mono" colspan="3" style="font-weight:700;color:var(--green)">${p2(profitPct)} auf Selbstkosten</td>
+      <td colspan="4" class="muted small">Wird auf Fertigungslohn + Gemeinkosten aufgeschlagen</td>
+    </tr>
+  `;
+
+  setText('zuschlagBasis', eur(installBase));
+  setText('zuschlagMatBasis', eur(matBase));
+}
 function calcVehicleCosts(){
  const dep=((n("vehPurchase")+n("vehInflation"))-n("vehRest"))/(n("vehYears")||1);
  const shelf=n("shelfCost")/(n("shelfYears")||1);
@@ -327,10 +381,12 @@ function calcVehicleQuote(){
 
 
 
-// KFE Custom DB – in memory, wird mit Hauptdaten gespeichert
-let _kfeCustomDb=[];
-function readCustomKFE(){ return _kfeCustomDb||[]; }
-function saveCustomKFE(rows){ _kfeCustomDb=rows||[]; }
+function readCustomKFE(){
+ try{return JSON.parse(localStorage.getItem('kfeCustomDb')||'[]')||[];}catch(e){return [];}
+}
+function saveCustomKFE(rows){
+ localStorage.setItem('kfeCustomDb',JSON.stringify(rows||[]));
+}
 function kfeDb(){
  const base=Array.isArray(window.KFE_CABLE_DB)?window.KFE_CABLE_DB:[];
  const custom=readCustomKFE();
@@ -464,7 +520,7 @@ function downloadKFECSVTemplate(){
 }
 function clearCustomKFE(){
  if(!confirm('Eigene importierte KFE-CSV wirklich löschen?')) return;
- _kfeCustomDb=[];
+ localStorage.removeItem('kfeCustomDb');
  renderKFESearch();
  alert('Eigene KFE-CSV wurde gelöscht.');
 }
@@ -510,25 +566,10 @@ function calcPositionsTotals(minuteSell,mixedCost,matFactor,machMinuteSell,machH
 function calcAll(){
  const empResults=employees.map(e=>e.type==="apprentice"?calcApprenticeCost(e):calcEmployeeCost(e)); const totalProductive=empResults.reduce((s,r)=>s+r.productiveHours,0); const totalPayroll=empResults.reduce((s,r)=>s+r.total,0); const mixed=totalProductive?totalPayroll/totalProductive:0; syncPayrollToBABAuto(true); syncVehicleToBAB();
  const groupTotals=groups.map(g=>{let rs=costRows.filter(r=>r.group===g);return{group:g,amount:rs.reduce((s,r)=>s+num(r.amount),0),installation:rs.reduce((s,r)=>s+num(r.amount)*num(r.installation)/100,0),verwaltung:rs.reduce((s,r)=>s+num(r.amount)*num(r.verwaltung)/100,0),material:rs.reduce((s,r)=>s+num(r.amount)*num(r.material)/100,0)}})
- const installBase=costRows.filter(r=>r.group==="Einzelkosten").reduce((s,r)=>s+num(r.amount)*num(r.installation)/100,0); const lohngeb=(groupTotals.find(g=>g.group==="lohngebundene GK")||{}).installation||0; const lohnneb=(groupTotals.find(g=>g.group==="Lohnnebenkosten")||{}).installation||0; const lohnun=(groupTotals.find(g=>g.group==="lohnunabhängige GK")||{}).installation||0; const overheadPct=installBase?((lohngeb+lohnneb+lohnun)/installBase*100):0;
+ const installBase=costRows.filter(r=>r.group==="Einzelkosten").reduce((s,r)=>s+num(r.amount)*num(r.installation)/100,0); const matBase=costRows.filter(r=>r.group==="Einzelkosten").reduce((s,r)=>s+num(r.amount)*num(r.material)/100,0); const lohngeb=(groupTotals.find(g=>g.group==="lohngebundene GK")||{}).installation||0; const lohnneb=(groupTotals.find(g=>g.group==="Lohnnebenkosten")||{}).installation||0; const lohnun=(groupTotals.find(g=>g.group==="lohnunabhängige GK")||{}).installation||0; const overheadPct=installBase?((lohngeb+lohnneb+lohnun)/installBase*100):0;
+ renderZuschlagTable(groupTotals, installBase, matBase);
  const hourly=mixed+(mixed*overheadPct/100); const hourlyProfit=hourly*(1+n("profit")/100); const minute=hourlyProfit/60; const mf=n("matFactor")*(1+n("matProfit")/100); const matSell=n("matCost")*mf; const labor=n("minutes")*minute; const bab=n("productiveHours")?(installBase+lohngeb+lohnneb+lohnun)/n("productiveHours"):0;
  document.getElementById("hourlyRate").textContent=eur(hourlyProfit)+"/Std."; document.getElementById("minuteRate").textContent=eur(minute)+"/min"; document.getElementById("mixedWage").textContent=eur(mixed); document.getElementById("payrollTotal").textContent=eur(totalPayroll); document.getElementById("payrollProductive").textContent=totalProductive.toLocaleString('de-DE',{maximumFractionDigits:1})+" h"; document.getElementById("matSurcharge").textContent=pct((mf-1)*100); document.getElementById("babHourly").textContent=eur(bab)+"/Std."; document.getElementById("laborPrice").textContent=eur(labor); document.getElementById("matSell").textContent=eur(matSell); document.getElementById("totalPrice").textContent=eur(labor+matSell); groupTotals.forEach((g,i)=>document.getElementById("g"+i).innerHTML=`Installation: ${eur(g.installation)}<br>Verwaltung: ${eur(g.verwaltung)}<br>Material: ${eur(g.material)}`)
- // ── BAB-Zuschlagsätze ──
- const fertigungslohn=costRows.filter(r=>r.group==="Einzelkosten").reduce((s,r)=>s+num(r.amount)*num(r.installation)/100,0);
- const gkLohngebunden=(groupTotals.find(g=>g.group==="lohngebundene GK")||{}).installation||0;
- const gkLohnnebenkosten=(groupTotals.find(g=>g.group==="Lohnnebenkosten")||{}).installation||0;
- const gkLohnunabhaengig=(groupTotals.find(g=>g.group==="lohnunabhängige GK")||{}).installation||0;
- const gkVerwaltung=costRows.reduce((s,r)=>s+num(r.amount)*num(r.verwaltung)/100,0);
- const herstellkosten=fertigungslohn+gkLohngebunden+gkLohnnebenkosten+gkLohnunabhaengig;
- const matGK=costRows.filter(r=>r.group!=="Einzelkosten").reduce((s,r)=>s+num(r.amount)*num(r.material)/100,0);
- const matEK=costRows.filter(r=>r.group==="Einzelkosten").reduce((s,r)=>s+num(r.amount)*num(r.material)/100,0);
- const _zs=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=pct(v);};
- _zs("zsLohngebunden",fertigungslohn>0?gkLohngebunden/fertigungslohn*100:0);
- _zs("zsLohnnebenkosten",fertigungslohn>0?gkLohnnebenkosten/fertigungslohn*100:0);
- _zs("zsLohnunabhaengig",fertigungslohn>0?gkLohnunabhaengig/fertigungslohn*100:0);
- _zs("zsGesamt",fertigungslohn>0?(gkLohngebunden+gkLohnnebenkosten+gkLohnunabhaengig)/fertigungslohn*100:0);
- _zs("babMatZuschlag",matEK>0?matGK/matEK*100:0);
- _zs("zsVerwaltung",herstellkosten>0?gkVerwaltung/herstellkosten*100:0);
  const veh=syncVehicleToBAB(); setText("vehDep",eur(veh.dep)); setText("shelfDep",eur(veh.shelf)); setText("vehFixedYear",eur(veh.fixed)); setText("vehVariableYear",eur(veh.variableYear)); setText("vehTotalYear",eur(veh.totalYear)+" (separat)"); setText("vehKmFull",eur(veh.fullKm)+"/km"); setText("vehKmYear",veh.kmYear.toLocaleString('de-DE',{maximumFractionDigits:0})+" km"); setText("vehFixedKm",eur(veh.fixedKm)+"/km"); setText("vehVarKm",eur(veh.varKm)+"/km"); setText("vehDayCost",eur(veh.dayCost)+"/Tag"); setText("vehHourCost",eur(veh.hourCost)+"/h");
  const mDep=(n("machPurchase")-n("machRest"))/(n("machYears")||1); const mFixed=mDep+n("machServiceYear")+n("machInsuranceYear")+n("machFinanceYear"); const mFixedHour=n("machHoursYear")?mFixed/n("machHoursYear"):0; const mVarHour=n("machEnergyHour")+n("machConsumablesHour")+n("machRepairHour"); const mInternalHour=mFixedHour+mVarHour; const mSellHour=mInternalHour*(1+n("machProfit")/100); const mMin=mSellHour/60; setText("machDep",eur(mDep)); setText("machFixedYear",eur(mFixed)); setText("machFixedHour",eur(mFixedHour)+"/h"); setText("machVarHour",eur(mVarHour)+"/h"); setText("machHour",eur(mSellHour)+"/h"); setText("machMinute",eur(mMin)+"/min");
  const qMatFactor=n("qMatFactor")||n("matFactor")||1;
@@ -565,7 +606,6 @@ function calcAll(){
  setText("pkAnteil",pct(pkAnteil));
 
  const monProfit=n("monRev")-n("monCost");document.getElementById("monProfit").textContent=eur(monProfit);document.getElementById("yearProfit").textContent=eur(monProfit*12);document.getElementById("profitability").textContent=pct(n("monRev")?monProfit/n("monRev")*100:0);document.getElementById("targetRevenue").textContent=eur(n("monCost")/(1-n("targetProfit")/100||1))
- autoSave();
 }
 function runCalc(){document.getElementById("calcResult").textContent=eur(safeCalc(document.getElementById("calcInput").value))}
 function showSaveStatus(msg,ok=true){
@@ -580,63 +620,60 @@ function showSaveStatus(msg,ok=true){
  el._t=setTimeout(()=>el.style.display='none',4000);
 }
 function buildSaveData(){
- return {v:3,employees,costRows,calcPositions,inputs:getInputs(),kfeCustomDb:readCustomKFE(),savedAt:new Date().toISOString()};
+ return {employees,costRows,calcPositions,inputs:getInputs(),kfeCustomDb:readCustomKFE(),savedAt:new Date().toISOString()};
 }
-function applyData(d){
- if(!d||!d.v)return false;
- if(d.employees)employees=d.employees;
- if(d.costRows)costRows=d.costRows;
- if(d.calcPositions)calcPositions=d.calcPositions;
- if(d.kfeCustomDb)saveCustomKFE(d.kfeCustomDb);
- setInputs(d.inputs||{});
- renderEmployees();renderCostRows();renderCalcPositions();renderKFESearch();calcAll();
- return true;
+// IndexedDB wrapper – funktioniert bei file:// und http:// zuverlässig
+const DB_NAME='kalkApp',DB_STORE='data',DB_KEY='main';
+function openDB(){
+ return new Promise((res,rej)=>{
+  const req=indexedDB.open(DB_NAME,1);
+  req.onupgradeneeded=e=>e.target.result.createObjectStore(DB_STORE);
+  req.onsuccess=e=>res(e.target.result);
+  req.onerror=e=>rej(e.target.error);
+ });
 }
-// ── Speicher: localStorage (primär) + sessionStorage (Backup) ──
-// IndexedDB wurde entfernt – zu viele Browser-Probleme auf iPad/file://
-const SAVE_KEY='kalk_v3';
-function _saveToStorage(data){
- const json=JSON.stringify(data);
- let ok=false;
- try{localStorage.setItem(SAVE_KEY,json);ok=true;}catch(e){}
- try{sessionStorage.setItem(SAVE_KEY,json);}catch(e){}
- return ok;
+function dbSave(data){
+ return openDB().then(db=>new Promise((res,rej)=>{
+  const tx=db.transaction(DB_STORE,'readwrite');
+  tx.objectStore(DB_STORE).put(JSON.stringify(data),DB_KEY);
+  tx.oncomplete=()=>res();
+  tx.onerror=e=>rej(e.target.error);
+ }));
 }
-function _loadFromStorage(){
- try{const r=localStorage.getItem(SAVE_KEY);if(r){const d=JSON.parse(r);if(d&&d.v)return d;}}catch(e){}
- try{const r=sessionStorage.getItem(SAVE_KEY);if(r){const d=JSON.parse(r);if(d&&d.v)return d;}}catch(e){}
- return null;
+function dbLoad(){
+ return openDB().then(db=>new Promise((res,rej)=>{
+  const tx=db.transaction(DB_STORE,'readonly');
+  const req=tx.objectStore(DB_STORE).get(DB_KEY);
+  req.onsuccess=e=>res(e.target.result?JSON.parse(e.target.result):null);
+  req.onerror=e=>rej(e.target.error);
+ }));
 }
-// ── Auto-Save (debounced, 1.5s nach letzter Änderung) ──
-let _saveTimer=null;
-function autoSave(){
- clearTimeout(_saveTimer);
- _saveTimer=setTimeout(()=>{
-  try{_saveToStorage(buildSaveData());}catch(e){console.warn('autoSave:',e);}
- },1500);
-}
-// ── Auto-Load beim Start ──
-function autoLoad(){
- const d=_loadFromStorage();
- if(!d)return;
- if(applyData(d)){
-  const ts=d.savedAt?' ('+new Date(d.savedAt).toLocaleString('de-DE')+')':'';
-  showSaveStatus('✓ Daten geladen'+ts);
- }
-}
-// ── Manuelles Speichern ──
 function saveData(){
- try{
-  const ok=_saveToStorage(buildSaveData());
-  if(ok)showSaveStatus('✓ Gespeichert – '+new Date().toLocaleTimeString('de-DE'));
-  else showSaveStatus('✗ Speichern fehlgeschlagen – bitte "Als Datei sichern"!',false);
- }catch(e){showSaveStatus('✗ Fehler: '+e.message,false);}
+ const data=buildSaveData();
+ dbSave(data).then(()=>{
+  showSaveStatus('✓ Gespeichert – '+new Date().toLocaleTimeString('de-DE'));
+ }).catch(e=>{
+  // Fallback localStorage
+  try{localStorage.setItem('kalkAppData',JSON.stringify(data));showSaveStatus('✓ Gespeichert (localStorage Fallback)');}
+  catch(e2){showSaveStatus('✗ Fehler: '+e.message+' – bitte "Als Datei sichern" nutzen!',false);}
+ });
 }
-// ── Manuelles Laden ──
 function loadData(){
- const d=_loadFromStorage();
- if(!applyData(d)){showSaveStatus('✗ Kein Speicherstand gefunden',false);return;}
- showSaveStatus('✓ Geladen'+(d.savedAt?' vom '+new Date(d.savedAt).toLocaleString('de-DE'):''));
+ dbLoad().then(d=>{
+  if(!d){
+   // try localStorage fallback
+   try{const raw=localStorage.getItem('kalkAppData');if(raw)d=JSON.parse(raw);}catch(e){}
+  }
+  if(!d){showSaveStatus('✗ Kein Speicherstand gefunden',false);return;}
+  employees=d.employees||employees;
+  costRows=d.costRows||costRows;
+  calcPositions=d.calcPositions||calcPositions;
+  if(d.kfeCustomDb)saveCustomKFE(d.kfeCustomDb);
+  setInputs(d.inputs||{});
+  renderEmployees();renderCostRows();renderCalcPositions();renderKFESearch();calcAll();
+  const ts=d.savedAt?(' vom '+new Date(d.savedAt).toLocaleString('de-DE')):'';
+  showSaveStatus('✓ Geladen'+ts);
+ }).catch(e=>showSaveStatus('✗ Ladefehler: '+e.message,false));
 }
 function getInputs(){let o={};document.querySelectorAll("input[id]").forEach(i=>{if(i.type!=="file")o[i.id]=i.value});return o}
 function setInputs(o){Object.entries(o).forEach(([k,v])=>{let el=document.getElementById(k);if(el)el.value=v})}
@@ -668,5 +705,3 @@ function importJSON(ev){
  r.readAsText(f);
 }
 syncPayrollToBABAuto(true);renderEmployees();renderCostRows();renderCalcPositions();renderKFESearch();calcAll();calcGFRate();
-setTimeout(autoLoad,600);
-setTimeout(updateGFBABRow,100);

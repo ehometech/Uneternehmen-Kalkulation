@@ -377,6 +377,35 @@
       </div>
     </div>
 
+    <!-- ===== ZUSCHLAGSSÄTZE ===== -->
+    <div class="card">
+      <div class="card-title">Zuschlagssätze nach BAB-Gruppen</div>
+      <div class="card-sub">Zeigt die Zuschlagssätze aller Kostengruppen aufgeteilt auf Installation, Verwaltung und Material – bezogen auf die Einzelkosten-Basis (Fertigungslohn produktiv).</div>
+      <div class="scroll">
+        <table id="zuschlagTable">
+          <thead>
+            <tr>
+              <th>Kostengruppe</th>
+              <th class="right">Betrag / Jahr €</th>
+              <th class="right">Installation €</th>
+              <th class="right" style="color:var(--accent)">Inst.-Zuschlag %</th>
+              <th class="right">Verwaltung €</th>
+              <th class="right" style="color:var(--blue)">Verw.-Zuschlag %</th>
+              <th class="right">Material €</th>
+              <th class="right" style="color:var(--amber)">Mat.-Zuschlag %</th>
+            </tr>
+          </thead>
+          <tbody id="zuschlagBody"></tbody>
+          <tfoot id="zuschlagFoot"></tfoot>
+        </table>
+      </div>
+      <div class="info-box" style="margin-top:12px">
+        💡 <b>Basis:</b> Einzelkosten-Installation (= Fertigungslohn produktiv) = <b id="zuschlagBasis">0,00 €</b> &nbsp;|&nbsp;
+        Materialbasis (Einzelkosten-Material) = <b id="zuschlagMatBasis">0,00 €</b><br>
+        Die Zuschlagssätze zeigen: Wie viel % kommen auf jeden € Fertigungslohn/Material an Gemeinkosten drauf.
+      </div>
+    </div>
+
     <!-- Personalkostenanteil (wie Perko perko_pgk) -->
     <div class="card">
       <div class="card-title">Personalkostenanteil (Kontrollrechnung nach Perko)</div>
