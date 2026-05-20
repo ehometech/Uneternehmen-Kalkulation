@@ -728,3 +728,38 @@ function importJSON(ev){
  r.readAsText(f);
 }
 syncPayrollToBABAuto(true);renderEmployees();renderCostRows();renderCalcPositions();renderKFESearch();calcAll();calcGFRate();
+
+// ── AUTO-SAVE: speichert 2s nach jeder Änderung automatisch ──
+let _autoSaveTimer=null;
+function autoSave(){
+ clearTimeout(_autoSaveTimer);
+ _autoSaveTimer=setTimeout(()=>{
+  try{
+   const data=buildSaveData();
+   dbSave(data).catch(()=>{
+    try{localStorage.setItem('kalkAppData_v3',JSON.stringify(data));}catch(e){}
+   });
+  }catch(e){}
+ },2000);
+}
+// calcAll patchen → jede Berechnung triggert Auto-Save
+const _origCalcAll=calcAll;
+window.calcAll=function(){_origCalcAll();autoSave();};
+
+// ── AUTO-LOAD beim Seitenstart (wird von initAuth aufgerufen) ──
+function autoLoadData(){
+ dbLoad().then(d=>{
+  if(!d){
+   try{const r=localStorage.getItem('kalkAppData_v3')||localStorage.getItem('kalkAppData');if(r)d=JSON.parse(r);}catch(e){}
+  }
+  if(!d)return;
+  if(d.employees)employees=d.employees;
+  if(d.costRows)costRows=d.costRows;
+  if(d.calcPositions)calcPositions=d.calcPositions;
+  if(d.kfeCustomDb)saveCustomKFE(d.kfeCustomDb);
+  setInputs(d.inputs||{});
+  renderEmployees();renderCostRows();renderCalcPositions();renderKFESearch();calcAll();
+  const ts=d.savedAt?(' vom '+new Date(d.savedAt).toLocaleString('de-DE')):'';
+  showSaveStatus('✓ Daten geladen'+ts);
+ }).catch(()=>{});
+}
