@@ -119,11 +119,40 @@
     /* SV HINT */
     .sv-hint{background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:var(--radius-sm);padding:8px 12px;font-size:12px;color:var(--amber);margin-top:8px}
 
+    /* ===== LOGIN OVERLAY ===== */
+    #loginOverlay{position:fixed;inset:0;z-index:9999;background:var(--accent);display:flex;align-items:center;justify-content:center}
+    .login-box{background:#fff;border-radius:16px;padding:40px 36px;width:100%;max-width:400px;box-shadow:0 24px 64px rgba(0,0,0,.35)}
+    .login-logo{font-size:26px;font-weight:700;color:var(--accent);margin-bottom:2px;letter-spacing:-.4px}
+    .login-sub{font-size:13px;color:var(--muted);margin-bottom:26px}
+    .login-field{margin-bottom:14px}
+    .login-field label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px}
+    .login-field input{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:15px;font-family:'DM Sans',sans-serif;color:var(--text);background:#fafaf8;transition:border-color .15s}
+    .login-field input:focus{outline:none;border-color:var(--accent)}
+    .login-btn{width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:6px;transition:background .15s}
+    .login-btn:hover{background:var(--accent2)}
+    .login-link{text-align:center;margin-top:14px;font-size:13px;color:var(--muted)}
+    .login-link a{color:var(--accent2);text-decoration:none;font-weight:500;cursor:pointer}
+    .login-link a:hover{text-decoration:underline}
+    .login-error{background:#fef2f2;border:1px solid #fca5a5;color:#7f1d1d;border-radius:8px;padding:9px 14px;font-size:13px;margin-bottom:12px;display:none}
+    .login-success{background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);border-radius:8px;padding:9px 14px;font-size:13px;margin-bottom:12px;display:none}
+    .login-view{display:none}.login-view.active{display:block}
+    .reset-code-box{background:var(--surface2);border:2px dashed var(--border);border-radius:10px;padding:14px;text-align:center;margin:12px 0}
+    .reset-code-box .code{font-family:'DM Mono',monospace;font-size:30px;font-weight:700;color:var(--accent);letter-spacing:.18em}
+    .reset-code-box .hint{font-size:12px;color:var(--muted);margin-top:6px}
+    /* ===== SETTINGS ===== */
+    .settings-group{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin-bottom:14px}
+    .settings-group-title{font-size:15px;font-weight:600;margin-bottom:3px}
+    .settings-group-sub{font-size:13px;color:var(--muted);margin-bottom:16px}
+    .pw-strength{height:4px;border-radius:2px;margin-top:5px;background:var(--border);transition:all .3s}
+    .pw-strength.weak{background:#ef4444;width:33%}.pw-strength.medium{background:#f59e0b;width:66%}.pw-strength.strong{background:#22c55e;width:100%}
+    .pw-strength-label{font-size:11px;color:var(--muted);margin-top:2px}
+
     @media print{
       .nav,.header-actions,.btn-row,.no-print{display:none!important}
       .section{display:block!important}
       .card{box-shadow:none;border:1px solid #ddd}
       body{background:white}
+      #loginOverlay{display:none!important}
     }
     @media(max-width:600px){
       .grid-2,.grid-3{grid-template-columns:1fr}
@@ -132,6 +161,70 @@
   </style>
 </head>
 <body>
+
+<!-- ===== LOGIN OVERLAY ===== -->
+<div id="loginOverlay">
+  <div class="login-box">
+    <div class="login-logo">⚙ Kalkulations-App</div>
+    <div class="login-sub">BAB · Stundensatz · Angebot</div>
+
+    <!-- LOGIN -->
+    <div id="viewLogin" class="login-view active">
+      <div id="loginError" class="login-error"></div>
+      <div class="login-field">
+        <label>E-Mail</label>
+        <input type="email" id="loginEmail" placeholder="ihre@email.de" autocomplete="email">
+      </div>
+      <div class="login-field">
+        <label>Passwort</label>
+        <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button class="login-btn" onclick="doLogin()">Anmelden</button>
+      <div class="login-link"><a onclick="showLoginView('viewForgot')">Passwort vergessen?</a></div>
+    </div>
+
+    <!-- PASSWORT VERGESSEN -->
+    <div id="viewForgot" class="login-view">
+      <div id="forgotError" class="login-error"></div>
+      <div id="forgotSuccess" class="login-success"></div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Gib deine E-Mail-Adresse ein. Du erhältst einen Reset-Code zum Zurücksetzen des Passworts.</p>
+      <div class="login-field">
+        <label>E-Mail</label>
+        <input type="email" id="forgotEmail" placeholder="ihre@email.de">
+      </div>
+      <button class="login-btn" onclick="doForgot()">Reset-Code anfordern</button>
+      <div class="login-link">
+        <a onclick="showLoginView('viewReset')">Ich habe einen Code</a> ·
+        <a onclick="showLoginView('viewLogin')">Zurück zum Login</a>
+      </div>
+    </div>
+
+    <!-- RESET CODE -->
+    <div id="viewReset" class="login-view">
+      <div id="resetError" class="login-error"></div>
+      <div id="resetSuccess" class="login-success"></div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Gib deinen Reset-Code und dein neues Passwort ein.</p>
+      <div class="login-field">
+        <label>E-Mail</label>
+        <input type="email" id="resetEmail" placeholder="ihre@email.de">
+      </div>
+      <div class="login-field">
+        <label>Reset-Code (6 Stellen)</label>
+        <input type="text" id="resetCode" placeholder="123456" maxlength="6" style="letter-spacing:.2em;font-family:'DM Mono',monospace;font-size:20px">
+      </div>
+      <div class="login-field">
+        <label>Neues Passwort</label>
+        <input type="password" id="resetNewPw" placeholder="Mindestens 6 Zeichen" oninput="checkStrength(this,'resetStrength','resetStrengthLabel')">
+        <div class="pw-strength" id="resetStrength"></div>
+        <div class="pw-strength-label" id="resetStrengthLabel"></div>
+      </div>
+      <button class="login-btn" onclick="doResetPassword()">Passwort zurücksetzen</button>
+      <div class="login-link"><a onclick="showLoginView('viewLogin')">Zurück zum Login</a></div>
+    </div>
+
+  </div>
+</div>
+
 <div class="wrap">
 
   <!-- HEADER -->
@@ -146,6 +239,7 @@
       <button class="btn-primary btn-sm" onclick="exportJSON()" title="Als JSON-Datei speichern – sicherer als localStorage">⬇ Als Datei sichern</button>
       <label style="margin:0"><button class="btn-secondary btn-sm" type="button" onclick="document.getElementById('importFile').click()" title="JSON-Datei laden">⬆ Datei laden</button><input id="importFile" type="file" style="display:none" onchange="importJSON(event)"></label>
       <button class="btn-secondary btn-sm" onclick="window.print()">🖨 Drucken</button>
+      <button class="btn-secondary btn-sm" onclick="doLogout()">🔒 Abmelden</button>
       <span id="saveStatus" style="display:none;font-size:12px;font-weight:500;padding:4px 10px;border-radius:6px;background:var(--green-bg);border:1px solid var(--green-border)"></span>
     </div>
   </div>
@@ -169,6 +263,7 @@
     <button class="nav-btn" onclick="showSection('sec-db',this)">📈 Deckungsbeitrag</button>
     <button class="nav-btn" onclick="showSection('sec-rentab',this)">💹 Rentabilität</button>
     <button class="nav-btn" onclick="showSection('sec-rechner',this)">🔢 Rechner</button>
+    <button class="nav-btn" onclick="showSection('sec-einstellungen',this)">⚙ Einstellungen</button>
   </div>
 
   <!-- ===== SECTION 1: PERSONAL ===== -->
@@ -214,33 +309,6 @@
       <div class="btn-row">
         <button class="btn-primary" onclick="addCostRow()">+ Kostenart hinzufügen</button>
         <button class="btn-secondary" onclick="syncPayrollToBAB()">🔄 Personal aktualisieren</button>
-      </div>
-
-      <!-- GF Unternehmerlohn Block -->
-      <div class="card" style="border-left:4px solid var(--primary);background:var(--surface2)">
-        <div class="card-title" style="font-size:15px">👔 Kalkulatorischer Unternehmerlohn GF</div>
-        <div class="card-sub">Als Gesellschafter-GF ohne AG-SV → geht direkt in lohnunabhängige GK. Wird automatisch in den BAB übernommen.</div>
-        <div class="grid">
-          <div>
-            <label>Netto-Gehalt / Monat €</label>
-            <input id="gfNetMonthly" type="number" value="3000" oninput="updateGFBABRow()">
-          </div>
-          <div>
-            <label>PKV / Monat € (voller Beitrag)</label>
-            <input id="gfPKV" type="number" value="450" oninput="updateGFBABRow()">
-          </div>
-          <div>
-            <label>Sonstige GF-Kosten / Monat €</label>
-            <input id="gfExtra" type="number" value="0" oninput="updateGFBABRow()">
-            <div class="input-hint">z.B. Firmenhandy, Berufskleidung, etc.</div>
-          </div>
-        </div>
-        <div class="kpi-grid" style="margin-top:10px">
-          <div class="kpi-card"><div class="kpi-label">Gesamt / Monat</div><div class="kpi-val" id="gfBABMonthly">3.450,00 €</div></div>
-          <div class="kpi-card highlight"><div class="kpi-label">Kalkulatorischer Unternehmerlohn / Jahr → BAB</div><div class="kpi-val" id="gfBABYearly">41.400,00 €</div></div>
-        </div>
-      </div>
-      <div style="margin-top:-8px">
       </div>
 
       <div class="scroll">
@@ -306,44 +374,6 @@
       <div class="kpi-card">
         <div class="kpi-label">Materialzuschlag</div>
         <div class="kpi-val" id="matSurcharge">0,00 %</div>
-      </div>
-    </div>
-
-    <!-- BAB Zuschlagsätze -->
-    <div class="card">
-      <div class="card-title">BAB-Zuschlagsätze (Kalkulations-Übersicht)</div>
-      <div class="card-sub">Alle Zuschlagsätze aus dem BAB – berechnet nach dem klassischen Meisterschul-Schema. Basis ist jeweils der Fertigungslohn (Einzelkosten Installation).</div>
-      <div class="kpi-grid">
-        <div class="kpi-card">
-          <div class="kpi-label">Lohngebundene GK-Zuschlag</div>
-          <div class="kpi-val" id="zsLohngebunden">0,00 %</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:4px">SV, BG, EFG ÷ Fertigungslohn</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-label">Lohnnebenkosten-Zuschlag</div>
-          <div class="kpi-val" id="zsLohnnebenkosten">0,00 %</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:4px">Nebenkosten ÷ Fertigungslohn</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-label">Lohnunabhängige GK-Zuschlag</div>
-          <div class="kpi-val" id="zsLohnunabhaengig">0,00 %</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:4px">Gemeinkosten ÷ Fertigungslohn</div>
-        </div>
-        <div class="kpi-card highlight">
-          <div class="kpi-label">Gemeinkostenzuschlag gesamt</div>
-          <div class="kpi-val" id="zsGesamt">0,00 %</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:4px">Alle GK ÷ Fertigungslohn</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-label">BAB-Materialkostenzuschlag</div>
-          <div class="kpi-val" id="babMatZuschlag">0,00 %</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:4px">Material-GK ÷ Material-EK</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-label">Verwaltungskostenzuschlag</div>
-          <div class="kpi-val" id="zsVerwaltung">0,00 %</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:4px">Verwaltungs-GK ÷ Herstellkosten</div>
-        </div>
       </div>
     </div>
 
@@ -682,15 +712,69 @@
 
 </div><!-- /wrap -->
 
+
+  <!-- ===== SECTION: EINSTELLUNGEN ===== -->
+  <div id="sec-einstellungen" class="section">
+
+    <div class="settings-group">
+      <div class="settings-group-title">👤 Konto-Information</div>
+      <div class="settings-group-sub">Deine aktuell angemeldete E-Mail-Adresse.</div>
+      <div class="login-field" style="max-width:340px">
+        <label>Angemeldete E-Mail</label>
+        <input type="text" id="settingsEmailDisplay" readonly style="background:var(--surface2);color:var(--muted)">
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-title">🔑 Passwort ändern</div>
+      <div class="settings-group-sub">Gib dein aktuelles Passwort ein, dann das neue Passwort (mind. 6 Zeichen).</div>
+      <div id="settingsPwError" class="login-error"></div>
+      <div id="settingsPwSuccess" class="login-success"></div>
+      <div class="grid" style="max-width:520px">
+        <div class="login-field"><label>Aktuelles Passwort</label><input type="password" id="settingsCurrentPw" placeholder="••••••••"></div>
+        <div></div>
+        <div class="login-field">
+          <label>Neues Passwort</label>
+          <input type="password" id="settingsNewPw" placeholder="Mindestens 6 Zeichen" oninput="checkStrength(this,'settingsPwStrength','settingsPwStrengthLabel')">
+          <div class="pw-strength" id="settingsPwStrength"></div>
+          <div class="pw-strength-label" id="settingsPwStrengthLabel"></div>
+        </div>
+        <div class="login-field"><label>Neues Passwort bestätigen</label><input type="password" id="settingsConfirmPw" placeholder="••••••••"></div>
+      </div>
+      <button class="btn-primary" onclick="doChangePassword()">🔑 Passwort ändern</button>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-title">📧 E-Mail-Adresse ändern</div>
+      <div class="settings-group-sub">Ändere die E-Mail-Adresse für deinen Login.</div>
+      <div id="settingsEmailError" class="login-error"></div>
+      <div id="settingsEmailSuccess" class="login-success"></div>
+      <div class="grid-2" style="max-width:520px">
+        <div class="login-field"><label>Neue E-Mail</label><input type="email" id="settingsNewEmail" placeholder="neu@email.de"></div>
+        <div class="login-field"><label>Aktuelles Passwort</label><input type="password" id="settingsEmailPw" placeholder="••••••••"></div>
+      </div>
+      <button class="btn-primary" onclick="doChangeEmail()">📧 E-Mail ändern</button>
+    </div>
+
+    <div class="settings-group" style="border-color:#fca5a5;background:#fef2f2">
+      <div class="settings-group-title" style="color:#7f1d1d">⚠ Login zurücksetzen</div>
+      <div class="settings-group-sub">Löscht alle Login-Daten. Beim nächsten Start kann ein neues Konto angelegt werden. App-Daten bleiben erhalten.</div>
+      <button class="btn-danger" onclick="doResetAccount()">🗑 Login-Daten löschen</button>
+    </div>
+
+  </div>
+
+</div><!-- /wrap -->
+
 <script src="kfe-db.js?v=12"></script>
 <script src="app.js?v=12"></script>
 <script>
+// ===== showSection (original + Einstellungen-Tab) =====
 function showSection(id, btn){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   if(btn) btn.classList.add('active');
-  // update workflow steps
   const stepMap={'sec-personal':0,'sec-bab':1,'sec-ergebnis':2,'sec-angebot':3};
   const steps=document.querySelectorAll('.step');
   const idx=stepMap[id];
@@ -701,41 +785,196 @@ function showSection(id, btn){
       else if(i===idx) s.classList.add('active-step');
     }
   });
+  // E-Mail in Einstellungen aktuell halten
+  if(id==='sec-einstellungen'){
+    const a=getAuth();
+    const el=document.getElementById('settingsEmailDisplay');
+    if(el&&a) el.value=a.email||'';
+  }
 }
 if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
-// Auto-Save beim Schließen
-window.addEventListener('beforeunload', ()=>{
-  try{
-    const data=buildSaveData();
-    dbSave(data).catch(()=>{});
-    try{localStorage.setItem('kalkAppData',JSON.stringify(data));}catch(e){}
-  }catch(e){}
-});
-// Auto-Load beim Start (falls Speicherstand vorhanden)
+window.addEventListener('beforeunload', ()=>{ try{ dbSave(buildSaveData()); }catch(e){} });
 window.addEventListener('DOMContentLoaded', ()=>{
-  // Beim Start: prüfen ob Speicherstand vorhanden
-  function checkSavedHint(){
+  dbLoad().then(d=>{
     const el=document.getElementById('saveStatus');
-    if(!el)return;
-    dbLoad().then(d=>{
-      if(!d){try{const r=localStorage.getItem('kalkAppData');if(r)d=JSON.parse(r);}catch(e){}}
-      if(d&&d.savedAt){
-        const ts=' vom '+new Date(d.savedAt).toLocaleString('de-DE');
-        el.textContent='💡 Speicherstand vorhanden'+ts+' – „Laden" klicken';
-        el.style.background='#e8f4fd';el.style.borderColor='#93c5fd';
-        el.style.color='#1e3a5f';el.style.display='inline';
-      }
-    }).catch(()=>{
-      try{const r=localStorage.getItem('kalkAppData');
-        if(r){const d=JSON.parse(r);if(d&&d.savedAt){
-          el.textContent='💡 Speicherstand vorhanden – „Laden" klicken';
-          el.style.display='inline';
-        }}
-      }catch(e){}
-    });
-  }
-  setTimeout(checkSavedHint,500);
+    if(d&&el){
+      const ts=d.savedAt?(' vom '+new Date(d.savedAt).toLocaleString('de-DE')):'';
+      el.textContent='💡 Speicherstand vorhanden'+ts+' – „Laden" klicken';
+      el.style.background='var(--blue-bg)';el.style.borderColor='var(--blue-border)';
+      el.style.color='var(--blue)';el.style.display='inline';
+    }
+  }).catch(()=>{});
 });
+
+// ===== AUTH SYSTEM =====
+const AUTH_KEY='kalk_auth_v1';
+const RESET_KEY='kalk_reset_v1';
+
+async function hashPassword(pw){
+  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pw+'|kalk_salt_2025'));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+function getAuth(){ try{return JSON.parse(localStorage.getItem(AUTH_KEY))||null;}catch{return null;} }
+function saveAuth(d){ localStorage.setItem(AUTH_KEY,JSON.stringify(d)); }
+
+function showLoginView(id){
+  document.querySelectorAll('.login-view').forEach(v=>v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  ['loginError','forgotError','forgotSuccess','resetError','resetSuccess'].forEach(i=>{
+    const el=document.getElementById(i);if(el){el.style.display='none';el.textContent='';}
+  });
+}
+function showMsg(id,msg,isError=true){
+  const el=document.getElementById(id);
+  if(!el)return;
+  el.innerHTML=msg;
+  el.style.display='block';
+}
+function checkStrength(input,barId,labelId){
+  const pw=input.value,bar=document.getElementById(barId),lbl=document.getElementById(labelId);
+  bar.className='pw-strength';
+  if(!pw){lbl.textContent='';return;}
+  let s=0;
+  if(pw.length>=6)s++;if(pw.length>=10)s++;
+  if(/[A-Z]/.test(pw)&&/[0-9]/.test(pw))s++;
+  if(/[^A-Za-z0-9]/.test(pw))s++;
+  if(s<=1){bar.classList.add('weak');lbl.textContent='Schwach';}
+  else if(s<=2){bar.classList.add('medium');lbl.textContent='Mittel';}
+  else{bar.classList.add('strong');lbl.textContent='Stark';}
+}
+
+async function doLogin(){
+  const email=document.getElementById('loginEmail').value.trim().toLowerCase();
+  const pw=document.getElementById('loginPassword').value;
+  if(!email||!pw){showMsg('loginError','Bitte E-Mail und Passwort eingeben.');return;}
+  const auth=getAuth();
+  if(!auth){
+    // Erster Start: Konto anlegen
+    if(pw.length<6){showMsg('loginError','Passwort muss mindestens 6 Zeichen haben.');return;}
+    const hash=await hashPassword(pw);
+    saveAuth({email,hash});
+    unlockApp(email);return;
+  }
+  if(auth.email!==email){showMsg('loginError','E-Mail-Adresse nicht bekannt.');return;}
+  const hash=await hashPassword(pw);
+  if(hash!==auth.hash){showMsg('loginError','Falsches Passwort.');return;}
+  unlockApp(email);
+}
+
+function unlockApp(email){
+  document.getElementById('loginOverlay').style.display='none';
+  const el=document.getElementById('settingsEmailDisplay');
+  if(el) el.value=email;
+}
+function doLogout(){
+  if(!confirm('Wirklich abmelden?'))return;
+  document.getElementById('loginOverlay').style.display='flex';
+  showLoginView('viewLogin');
+  document.getElementById('loginPassword').value='';
+}
+
+async function doForgot(){
+  const email=document.getElementById('forgotEmail').value.trim().toLowerCase();
+  if(!email){showMsg('forgotError','Bitte E-Mail eingeben.');return;}
+  const auth=getAuth();
+  if(!auth||auth.email!==email){
+    // Gleiche Meldung aus Sicherheitsgründen
+    showMsg('forgotSuccess','Wenn ein Konto mit dieser E-Mail existiert, wird der Code angezeigt.',false);
+    return;
+  }
+  const code=Math.floor(100000+Math.random()*900000).toString();
+  const expires=Date.now()+15*60*1000;
+  sessionStorage.setItem(RESET_KEY,JSON.stringify({email,code,expires}));
+  document.getElementById('forgotError').style.display='none';
+  const el=document.getElementById('forgotSuccess');
+  el.innerHTML=`<b>✓ Dein Reset-Code:</b>
+    <div class="reset-code-box">
+      <div class="code">${code}</div>
+      <div class="hint">Gültig für 15 Minuten – diesen Code notieren, dann „Ich habe einen Code" klicken.</div>
+    </div>
+    <small style="color:var(--muted)">💡 Da die App ohne Server läuft, wird der Code direkt angezeigt statt per E-Mail gesendet.</small>`;
+  el.style.display='block';
+}
+
+async function doResetPassword(){
+  const email=document.getElementById('resetEmail').value.trim().toLowerCase();
+  const code=document.getElementById('resetCode').value.trim();
+  const newPw=document.getElementById('resetNewPw').value;
+  if(!email||!code||!newPw){showMsg('resetError','Bitte alle Felder ausfüllen.');return;}
+  if(newPw.length<6){showMsg('resetError','Passwort muss mindestens 6 Zeichen haben.');return;}
+  let rd=null;try{rd=JSON.parse(sessionStorage.getItem(RESET_KEY));}catch{}
+  if(!rd){showMsg('resetError','Kein gültiger Reset-Code gefunden. Bitte neu anfordern.');return;}
+  if(Date.now()>rd.expires){sessionStorage.removeItem(RESET_KEY);showMsg('resetError','Code abgelaufen. Bitte neu anfordern.');return;}
+  if(rd.email!==email||rd.code!==code){showMsg('resetError','E-Mail oder Code stimmt nicht.');return;}
+  const hash=await hashPassword(newPw);
+  saveAuth({email,hash});
+  sessionStorage.removeItem(RESET_KEY);
+  showMsg('resetSuccess','✓ Passwort erfolgreich zurückgesetzt! Du kannst dich jetzt anmelden.',false);
+  document.getElementById('resetSuccess').style.display='block';
+  setTimeout(()=>showLoginView('viewLogin'),2500);
+}
+
+async function doChangePassword(){
+  const errEl=document.getElementById('settingsPwError'),okEl=document.getElementById('settingsPwSuccess');
+  errEl.style.display='none';okEl.style.display='none';
+  const cur=document.getElementById('settingsCurrentPw').value;
+  const nw=document.getElementById('settingsNewPw').value;
+  const cf=document.getElementById('settingsConfirmPw').value;
+  if(!cur||!nw||!cf){showMsg('settingsPwError','Bitte alle Felder ausfüllen.');return;}
+  if(nw.length<6){showMsg('settingsPwError','Neues Passwort muss mindestens 6 Zeichen haben.');return;}
+  if(nw!==cf){showMsg('settingsPwError','Die neuen Passwörter stimmen nicht überein.');return;}
+  const auth=getAuth();if(!auth){showMsg('settingsPwError','Kein Konto gefunden.');return;}
+  const curHash=await hashPassword(cur);
+  if(curHash!==auth.hash){showMsg('settingsPwError','Aktuelles Passwort ist falsch.');return;}
+  saveAuth({...auth,hash:await hashPassword(nw)});
+  document.getElementById('settingsCurrentPw').value='';
+  document.getElementById('settingsNewPw').value='';
+  document.getElementById('settingsConfirmPw').value='';
+  document.getElementById('settingsPwStrength').className='pw-strength';
+  document.getElementById('settingsPwStrengthLabel').textContent='';
+  okEl.innerHTML='✓ Passwort erfolgreich geändert!';okEl.style.display='block';
+  setTimeout(()=>{okEl.style.display='none';},4000);
+}
+
+async function doChangeEmail(){
+  const errEl=document.getElementById('settingsEmailError'),okEl=document.getElementById('settingsEmailSuccess');
+  errEl.style.display='none';okEl.style.display='none';
+  const newEmail=document.getElementById('settingsNewEmail').value.trim().toLowerCase();
+  const pw=document.getElementById('settingsEmailPw').value;
+  if(!newEmail||!pw){showMsg('settingsEmailError','Bitte alle Felder ausfüllen.');return;}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)){showMsg('settingsEmailError','Bitte eine gültige E-Mail eingeben.');return;}
+  const auth=getAuth();
+  const hash=await hashPassword(pw);
+  if(hash!==auth.hash){showMsg('settingsEmailError','Passwort ist falsch.');return;}
+  saveAuth({...auth,email:newEmail});
+  document.getElementById('settingsEmailDisplay').value=newEmail;
+  document.getElementById('settingsNewEmail').value='';
+  document.getElementById('settingsEmailPw').value='';
+  okEl.innerHTML='✓ E-Mail-Adresse erfolgreich geändert!';okEl.style.display='block';
+  setTimeout(()=>{okEl.style.display='none';},4000);
+}
+
+function doResetAccount(){
+  if(!confirm('Wirklich alle Login-Daten löschen?\n\nApp-Daten bleiben erhalten. Beim nächsten Start wird ein neues Konto angelegt.'))return;
+  localStorage.removeItem(AUTH_KEY);
+  sessionStorage.removeItem(RESET_KEY);
+  alert('Login-Daten gelöscht. Die Seite wird neu geladen.');
+  location.reload();
+}
+
+// Startup
+(function initAuth(){
+  const auth=getAuth();
+  const overlay=document.getElementById('loginOverlay');
+  if(!auth){
+    // Erster Start: Hinweis anpassen
+    const link=document.querySelector('#viewLogin .login-link');
+    if(link) link.innerHTML='<span style="color:var(--muted);font-size:12px">Erster Start: E-Mail & Passwort frei wählen</span>';
+  }
+  const emailEl=document.getElementById('settingsEmailDisplay');
+  if(emailEl&&auth) emailEl.value=auth.email||'';
+  overlay.style.display='flex';
+})();
 </script>
 </body>
 </html>
