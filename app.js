@@ -154,7 +154,6 @@ function updRow(id,k,v,autoFill=null){
   const other=fields.filter(f=>f!==k&&f!==autoFill);
   const sum=num(r[k])+(other.length?num(r[other[0]]):0);
   r[autoFill]=Math.max(0,Math.round((100-sum)*100)/100);
-  if(r.auto) r._manualDist=true;
   renderCostRows();
  }
  calcAll();
@@ -191,71 +190,50 @@ function payrollBABSplit(){
  const staffLG=staff.map(calcLohngebunden);
  const appLG=app.map(calcLohngebunden);
  const sum=(arr,k)=>arr.reduce((s,r)=>s+num(r[k]),0);
- const rat=r=>r.attendanceHours?Math.min(r.productiveHours/r.attendanceHours,1):0;
-
- const productiveStaffGross=staffCosts.reduce((s,r,i)=>s+staffLG[i].gross*rat(r),0);
- const productiveAppGross=appCosts.reduce((s,r,i)=>s+appLG[i].gross*rat(r),0);
- const unproductiveStaffGross=staffCosts.reduce((s,r,i)=>s+staffLG[i].gross*(1-rat(r)),0);
- const unproductiveAppGross=appCosts.reduce((s,r,i)=>s+appLG[i].gross*(1-rat(r)),0);
-
- // SV aufteilen: produktiver Anteil → 100% Inst, unproduktiver → 70/30
- let lgSVprod=0, lgSVunprod=0;
- [...staffCosts.map((r,i)=>({r,lg:staffLG[i]})),...appCosts.map((r,i)=>({r,lg:appLG[i]}))]
-  .forEach(({r,lg})=>{ const p=rat(r); lgSVprod+=lg.social*p; lgSVunprod+=lg.social*(1-p); });
-
- // BG + EFG immer 100% Installation
+ // Fertigungslohn (Brutto-Anteil produktiv) = gross * productiveHours/attendanceHours
+ const productiveStaffGross=staffCosts.reduce((s,r,i)=>{
+  const lg=staffLG[i];
+  const ratio=r.attendanceHours?Math.min(r.productiveHours/r.attendanceHours,1):0;
+  return s+lg.gross*ratio;
+ },0);
+ const productiveAppGross=appCosts.reduce((s,r,i)=>{
+  const lg=appLG[i];
+  const ratio=r.attendanceHours?Math.min(r.productiveHours/r.attendanceHours,1):0;
+  return s+lg.gross*ratio;
+ },0);
+ const unproductiveStaffGross=staffCosts.reduce((s,r,i)=>{
+  const lg=staffLG[i];
+  const ratio=r.attendanceHours?Math.min(r.productiveHours/r.attendanceHours,1):0;
+  return s+lg.gross*(1-ratio);
+ },0);
+ const unproductiveAppGross=appCosts.reduce((s,r,i)=>{
+  const lg=appLG[i];
+  const ratio=r.attendanceHours?Math.min(r.productiveHours/r.attendanceHours,1):0;
+  return s+lg.gross*(1-ratio);
+ },0);
+ // lohngebundene GK gesamt (nicht aufgeteilt produktiv/unproduktiv – klassischer BAB)
+ const lgSV=sum(staffLG,'social')+sum(appLG,'social');
  const lgAccident=sum(staffLG,'accident')+sum(appLG,'accident');
  const lgEFG=sum(staffLG,'efg')+sum(appLG,'efg');
-
- // Sonstige + betriebliche nach Durchschnitts-Ratio
- const allC=[...staffCosts,...appCosts];
- const avgR=allC.length?allC.reduce((s,r)=>s+rat(r),0)/allC.length:1;
- const lgOtherT=sum(staffLG,'otherLegal')+sum(appLG,'otherLegal');
- const lgCompT=sum(staffLG,'company')+sum(appLG,'company');
-
+ const lgOther=sum(staffLG,'otherLegal')+sum(appLG,'otherLegal');
+ const lgCompany=sum(staffLG,'company')+sum(appLG,'company');
  return {
-  productiveStaff:productiveStaffGross, productiveApprentice:productiveAppGross,
-  unproductiveStaff:unproductiveStaffGross, unproductiveApprentice:unproductiveAppGross,
+  productiveStaff:productiveStaffGross,
+  productiveApprentice:productiveAppGross,
+  unproductiveStaff:unproductiveStaffGross,
+  unproductiveApprentice:unproductiveAppGross,
   productiveHours:sum(staffCosts,'productiveHours')+sum(appCosts,'productiveHours'),
   totalPayroll:sum(staffCosts,'total')+sum(appCosts,'total'),
-  lgSVprod, lgSVunprod, lgAccident, lgEFG,
-  lgOtherProd:lgOtherT*avgR, lgOtherUnprod:lgOtherT*(1-avgR),
-  lgCompProd:lgCompT*avgR,   lgCompUnprod:lgCompT*(1-avgR),
-  lgSV:lgSVprod+lgSVunprod, lgOther:lgOtherT, lgCompany:lgCompT
+  lgSV, lgAccident, lgEFG, lgOther, lgCompany
  };
 }
 function setAutoBABRow(auto,group,name,amount,installation=70,verwaltung=30,material=0){
  let r=costRows.find(x=>x.auto===auto);
- if(!r){r={id:Date.now()+Math.floor(Math.random()*1000),auto,group,name,amount:0,calc:'automatisch aus Personal',installation,verwaltung,material,_manualDist:false};costRows.unshift(r);}
+ if(!r){r={id:Date.now()+Math.floor(Math.random()*1000),auto,group,name,amount:0,calc:'automatisch aus Personal',installation,verwaltung,material}; costRows.unshift(r);}
  r.group=group; r.name=name; r.amount=round2(amount); r.calc='automatisch aus Personal';
- if(!r._manualDist){r.installation=installation;r.verwaltung=verwaltung;r.material=material;}
- const el=document.getElementById('rowAmount_'+r.id); if(el&&document.activeElement!==el) el.value=round2(r.amount);
+ const el=document.getElementById('rowAmount_'+r.id); if(el && document.activeElement!==el) el.value=round2(r.amount);
  return r;
 }
-
-function syncPayrollToBABAuto(updateProductiveHours=true){
- const s=payrollBABSplit();
- // Einzelkosten
- setAutoBABRow('productivePayroll',  'Einzelkosten','Fertigungslohn (Brutto) produktive Mitarbeiter',s.productiveStaff,  100,0,0);
- setAutoBABRow('productiveApprentice','Einzelkosten','Fertigungslohn (Brutto) produktive Lehrlinge',  s.productiveApprentice,100,0,0);
- // lohngebundene GK — korrekt nach produktiv/unproduktiv aufgeteilt
- setAutoBABRow('lgSVprod',    'lohngebundene GK','SV AG-Anteil auf Fertigungslohn (produktiv)',           s.lgSVprod,   100,0,0);
- setAutoBABRow('lgSVunprod',  'lohngebundene GK','SV AG-Anteil auf Hilfslöhne (unproduktiv)',             s.lgSVunprod,  70,30,0);
- setAutoBABRow('lgAccident',  'lohngebundene GK','Berufsgenossenschaft / Unfallversicherung',             s.lgAccident, 100,0,0);
- setAutoBABRow('lgEFG',       'lohngebundene GK','EFG-Umlage abzgl. Erstattung',                         s.lgEFG,      100,0,0);
- setAutoBABRow('lgOtherProd', 'lohngebundene GK','Sonstige gesetzl. Nebenkosten (produktiver Anteil)',    s.lgOtherProd,100,0,0);
- setAutoBABRow('lgOtherUnprod','lohngebundene GK','Sonstige gesetzl. Nebenkosten (unproduktiver Anteil)', s.lgOtherUnprod,70,30,0);
- setAutoBABRow('lgCompProd',  'lohngebundene GK','Betriebliche Zusatzkosten (produktiver Anteil)',        s.lgCompProd, 100,0,0);
- setAutoBABRow('lgCompUnprod','lohngebundene GK','Betriebliche Zusatzkosten (unproduktiver Anteil)',      s.lgCompUnprod,70,30,0);
- // lohnunabhängige GK
- setAutoBABRow('unproductivePayroll',  'lohnunabhängige GK','Bruttolohn unproduktive Mitarbeiteranteile',s.unproductiveStaff,  70,30,0);
- setAutoBABRow('unproductiveApprentice','lohnunabhängige GK','Bruttolohn unproduktive Lehrlingsanteile', s.unproductiveApprentice,70,30,0);
- const ph=document.getElementById('productiveHours');
- if(updateProductiveHours&&ph&&document.activeElement!==ph) ph.value=round2(s.productiveHours);
- return s;
-}
-function syncPayrollToBAB(){syncPayrollToBABAuto(true);renderCostRows();calcAll();}
-
 function calcGFRate(){
  const monthlyWage=n("gfMonthlyWage")||5000;
  const workDays=n("gfWorkDays")||220;
@@ -275,6 +253,27 @@ function calcGFRate(){
  setText("gfSellRate",eur(sellRate)+"/h");
  setText("gfMinRate",eur(minRate)+"/min");
 }
+
+function syncPayrollToBABAuto(updateProductiveHours=true){
+ const s=payrollBABSplit();
+ // Einzelkosten – produktive Lohnkosten
+ setAutoBABRow('productivePayroll','Einzelkosten','Fertigungslohn (Brutto) produktive Mitarbeiter',s.productiveStaff,100,0,0);
+ setAutoBABRow('productiveApprentice','Einzelkosten','Fertigungslohn (Brutto) produktive Lehrlinge',s.productiveApprentice,100,0,0);
+ // lohngebundene GK – Sozialversicherung & Nebenkosten (automatisch aus Personal)
+  setAutoBABRow('lgSV','lohngebundene GK','SV AG-Anteil (RV+KV+AV+PV) alle MA+Azubi',s.lgSV,100,0,0);
+ setAutoBABRow('lgAccident','lohngebundene GK','Berufsgenossenschaft / Unfallversicherung alle MA+Azubi',s.lgAccident,100,0,0);
+ setAutoBABRow('lgEFG','lohngebundene GK','EFG-Umlage abzgl. Erstattung alle MA+Azubi',s.lgEFG,100,0,0);
+ setAutoBABRow('lgOther','lohngebundene GK','Sonstige gesetzl. Lohnnebenkosten (MA)',s.lgOther,100,0,0);
+ setAutoBABRow('lgCompany','lohngebundene GK','Betriebliche Zusatzkosten MA (bAV etc.)',s.lgCompany,100,0,0);
+ // lohnunabhängige GK – unproduktive Anteile
+ setAutoBABRow('unproductivePayroll','lohnunabhängige GK','Bruttolohn unproduktive Mitarbeiteranteile',s.unproductiveStaff,70,30,0);
+ setAutoBABRow('unproductiveApprentice','lohnunabhängige GK','Bruttolohn unproduktive Lehrlingsanteile',s.unproductiveApprentice,70,30,0);
+ const ph=document.getElementById('productiveHours'); if(updateProductiveHours && ph && document.activeElement!==ph) ph.value=round2(s.productiveHours);
+ return s;
+}
+function syncPayrollToBAB(){syncPayrollToBABAuto(true); renderCostRows(); calcAll();}
+
+
 
 function setText(id,value){const el=document.getElementById(id); if(el) el.textContent=value;}
 
@@ -692,22 +691,26 @@ function calcAll(){
 
  renderZuschlagTable(groupTotals, installBase, matBase);
 
- // prodHours MUSS vor gkZuschlagStd definiert sein
+ // GK-Zuschlag pro produktiver Stunde (aus BAB, für MA-Tabelle)
+ const gkZuschlagStd = prodHours ? allGK/prodHours : 0;
+
+ // Tabelle: Stundensatz je Mitarbeiter
+ renderEmpRateTable(empResults, employees, gkZuschlagStd, n("profit"));
+
+ // ── KORREKTER BETRIEBSSTUNDENSATZ (BAB / Perko-Methode) ──
+ // Selbstkosten/Jahr = Fertigungslohn (BAB) + lohngebundene GK + lohnunabh. GK + Verwaltung
+ // NICHT: mixed × (1 + overhead%) → das würde SV doppelt zählen!
  const prodHours=n("productiveHours")||totalProductive||1;
  const selbstkostenJahr=installBase+allGK;
  const selbstkostenStd=selbstkostenJahr/prodHours;
  const hourlyProfit=selbstkostenStd*(1+n("profit")/100);
  const minute=hourlyProfit/60;
- const bab=selbstkostenStd;
-
- // GK-Zuschlag pro Stunde (für MA-Tabelle)
- const gkZuschlagStd=allGK/prodHours;
- renderEmpRateTable(empResults, employees, gkZuschlagStd, n("profit"));
 
  // Materialzuschlag inkl. Gewinn
  const mf=n("matFactor")*(1+n("matProfit")/100)*(1+n("profit")/100);
  const matSell=n("matCost")*mf;
  const labor=n("minutes")*minute;
+ const bab=selbstkostenStd; // Selbstkosten ohne Gewinn
  document.getElementById("hourlyRate").textContent=eur(hourlyProfit)+"/Std.";
  document.getElementById("minuteRate").textContent=eur(minute)+"/min";
  document.getElementById("mixedWage").textContent=eur(avgBrutto);
@@ -907,4 +910,119 @@ function autoLoadData(){
   const ts=d.savedAt?(' vom '+new Date(d.savedAt).toLocaleString('de-DE')):'';
   showSaveStatus('✓ Daten geladen'+ts);
  }).catch(()=>{});
+}
+
+// ===== CLAUDE KI-FUNKTIONEN =====
+function getApiKey(){return localStorage.getItem('kalk_api_key')||'';}
+
+function doSaveApiKey(){
+  const el=document.getElementById('settingsApiKey');
+  const key=el?.value.trim();
+  if(!key){alert('Bitte API-Key eingeben.');return;}
+  localStorage.setItem('kalk_api_key',key);
+  el.value='';
+  const ok=document.getElementById('settingsApiSuccess');
+  if(ok){ok.innerHTML='✓ API-Key gespeichert!';ok.style.display='block';setTimeout(()=>ok.style.display='none',3000);}
+}
+
+async function callClaude(messages, systemPrompt){
+  // Netlify Proxy verwenden (API-Key sicher auf dem Server)
+  try{
+    const resp=await fetch('/api/claude',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({system:systemPrompt, messages})
+    });
+    if(!resp.ok){
+      const e=await resp.text();
+      throw new Error('Status '+resp.status+': '+e);
+    }
+    const data=await resp.json();
+    if(data.error) throw new Error(JSON.stringify(data.error));
+    return data.content?.[0]?.text||'Keine Antwort erhalten.';
+  }catch(e){
+    return '❌ Fehler: '+e.message;
+  }
+}
+
+function getKalkContext(){
+  const hrs=document.getElementById('hourlyRate')?.textContent||'?';
+  const bab=document.getElementById('babHourly')?.textContent||'?';
+  const pay=document.getElementById('payrollTotal')?.textContent||'?';
+  const ph=document.getElementById('payrollProductive')?.textContent||'?';
+  const mat=document.getElementById('matSurcharge')?.textContent||'?';
+  return `Aktuelle Kalkulations-Daten (Elektro-Handwerk Deutschland):
+- Stundenverrechnungssatz (inkl. Gewinn): ${hrs}
+- Selbstkosten/Stunde (ohne Gewinn): ${bab}
+- Personalkosten/Jahr: ${pay}
+- Produktive Stunden/Jahr: ${ph}
+- Materialzuschlag: ${mat}
+- Gewinnzuschlag: ${n('profit')||10}%`;
+}
+
+async function aiCheckKalkulation(){
+  const panel=document.getElementById('aiKalkPanel');
+  const resp=document.getElementById('aiKalkResponse');
+  if(!panel||!resp)return;
+  panel.classList.add('open');
+  resp.innerHTML='<span class="ai-thinking">🤖 Claude analysiert deine Kalkulation…</span>';
+  const text=await callClaude(
+    [{role:'user',content:`Analysiere meine Betriebskalkulation:\n\n${getKalkContext()}\n\nIst mein Stundensatz korrekt? Was sollte ich verbessern? Vergleiche mit typischen Werten im deutschen Elektro-Handwerk.`}],
+    'Du bist Kalkulations-Experte für deutsches Handwerk. Analysiere und gib praxisnahe Empfehlungen auf Deutsch mit Emojis.'
+  );
+  if(text) resp.textContent=text;
+}
+
+async function aiGenAngebot(){
+  const panel=document.getElementById('aiAngebotPanel');
+  const resp=document.getElementById('aiAngebotResponse');
+  if(!panel||!resp)return;
+  panel.classList.add('open');
+  resp.innerHTML='<span class="ai-thinking">🤖 Claude erstellt Angebotstext…</span>';
+  const positions=calcPositions.map((p,i)=>`${i+1}. ${p.name} — ${p.qty} ${p.unit}, ${num(p.minutes)*num(p.qty)} min`).join('\n');
+  const netto=document.getElementById('qNet')?.textContent||'?';
+  const text=await callClaude(
+    [{role:'user',content:`Erstelle professionellen Angebotstext:\nPositionen:\n${positions||'(keine)'}\nPreis netto: ${netto}\nStundensatz: ${document.getElementById('hourlyRate')?.textContent||'?'}`}],
+    'Du bist Elektroinstallateur-Meister. Schreibe einen professionellen Angebotstext auf Deutsch mit Betreff, Anrede, Leistungsbeschreibung und Schluss.'
+  );
+  if(text) resp.textContent=text;
+}
+
+let aiChatHistory=[];
+
+async function aiSendChat(){
+  const input=document.getElementById('aiChatInput');
+  const wrap=document.getElementById('aiChatWrap');
+  const btn=document.getElementById('aiChatBtn');
+  const msg=input?.value.trim();
+  if(!msg||!wrap)return;
+  input.value='';
+  if(btn)btn.disabled=true;
+  wrap.innerHTML+=`<div class="ai-msg user">${msg.replace(/</g,'&lt;')}</div>`;
+  const thinking=document.createElement('div');
+  thinking.className='ai-msg ai';
+  thinking.innerHTML='<span class="ai-thinking">🤖 Claude denkt…</span>';
+  wrap.appendChild(thinking);
+  wrap.scrollTop=wrap.scrollHeight;
+  aiChatHistory.push({role:'user',content:msg});
+  const text=await callClaude(
+    aiChatHistory,
+    `Du bist KI-Assistent für ein deutsches Elektro-Handwerksunternehmen.\n${getKalkContext()}\nAntworte kurz und praxisnah auf Deutsch.`
+  );
+  aiChatHistory.push({role:'assistant',content:text||''});
+  thinking.innerHTML=(text||'Fehler').replace(/</g,'&lt;').replace(/\n/g,'<br>');
+  if(btn)btn.disabled=false;
+  wrap.scrollTop=wrap.scrollHeight;
+}
+
+function aiQuick(question){
+  showSection('sec-ki', document.querySelector('[onclick*="sec-ki"]'));
+  const input=document.getElementById('aiChatInput');
+  if(input){input.value=question; aiSendChat();}
+}
+
+function aiClearChat(){
+  aiChatHistory=[];
+  const w=document.getElementById('aiChatWrap');
+  if(w) w.innerHTML='<div class="ai-msg ai">👋 Chat geleert. Wie kann ich helfen?</div>';
 }
