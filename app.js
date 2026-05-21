@@ -565,19 +565,82 @@ function calcPositionsTotals(minuteSell,mixedCost,matFactor,machMinuteSell,machH
 }
 
 function calcAll(){
- const empResults=employees.map(e=>e.type==="apprentice"?calcApprenticeCost(e):calcEmployeeCost(e)); const totalProductive=empResults.reduce((s,r)=>s+r.productiveHours,0); const totalPayroll=empResults.reduce((s,r)=>s+r.total,0); const mixed=totalProductive?totalPayroll/totalProductive:0; syncPayrollToBABAuto(true); syncVehicleToBAB();
- const groupTotals=groups.map(g=>{let rs=costRows.filter(r=>r.group===g);return{group:g,amount:rs.reduce((s,r)=>s+num(r.amount),0),installation:rs.reduce((s,r)=>s+num(r.amount)*num(r.installation)/100,0),verwaltung:rs.reduce((s,r)=>s+num(r.amount)*num(r.verwaltung)/100,0),material:rs.reduce((s,r)=>s+num(r.amount)*num(r.material)/100,0)}})
- const installBase=costRows.filter(r=>r.group==="Einzelkosten").reduce((s,r)=>s+num(r.amount)*num(r.installation)/100,0); const matBase=costRows.filter(r=>r.group==="Einzelkosten").reduce((s,r)=>s+num(r.amount)*num(r.material)/100,0); const lohngeb=(groupTotals.find(g=>g.group==="lohngebundene GK")||{}).installation||0; const lohnneb=(groupTotals.find(g=>g.group==="Lohnnebenkosten")||{}).installation||0; const lohnun=(groupTotals.find(g=>g.group==="lohnunabhängige GK")||{}).installation||0; const allGK=lohngeb+lohnneb+lohnun; const overheadPct=installBase?(allGK/installBase*100):0;
+ const empResults=employees.map(e=>e.type==="apprentice"?calcApprenticeCost(e):calcEmployeeCost(e));
+ const totalProductive=empResults.reduce((s,r)=>s+r.productiveHours,0);
+ const totalPayroll=empResults.reduce((s,r)=>s+r.total,0);
+ const totalGross=empResults.reduce((s,r)=>s+r.gross,0);
+ // Ø Bruttostundenlohn (nur für Anzeige)
+ const avgBrutto=totalProductive?totalGross/totalProductive:0;
+ // mixed = Vollkosten/Stunde (für Anzeige und interne Kostenkalkulation Angebot)
+ const mixed=totalProductive?totalPayroll/totalProductive:0;
+
+ syncPayrollToBABAuto(true); syncVehicleToBAB();
+
+ const groupTotals=groups.map(g=>{
+  let rs=costRows.filter(r=>r.group===g);
+  return{group:g,
+   amount:rs.reduce((s,r)=>s+num(r.amount),0),
+   installation:rs.reduce((s,r)=>s+num(r.amount)*num(r.installation)/100,0),
+   verwaltung:rs.reduce((s,r)=>s+num(r.amount)*num(r.verwaltung)/100,0),
+   material:rs.reduce((s,r)=>s+num(r.amount)*num(r.material)/100,0)
+  };
+ });
+
+ // ── BAB-Kostenbasis ──
+ // Einzelkosten: Fertigungslohn (Brutto, produktiver Anteil) aus BAB
+ const installBase=costRows.filter(r=>r.group==="Einzelkosten")
+  .reduce((s,r)=>s+num(r.amount)*num(r.installation)/100,0);
+ const matBase=costRows.filter(r=>r.group==="Einzelkosten")
+  .reduce((s,r)=>s+num(r.amount)*num(r.material)/100,0);
+
+ // GK-Gruppen: Installation + Verwaltung zusammen (beide gehören in Betriebskosten)
+ // Material-Anteil der GK läuft separat über Materialzuschlag
+ const gkNames=['lohngebundene GK','Lohnnebenkosten','lohnunabhängige GK'];
+ let gkInstJahr=0, gkVerwJahr=0;
+ gkNames.forEach(name=>{
+  const g=groupTotals.find(x=>x.group===name)||{installation:0,verwaltung:0};
+  gkInstJahr+=g.installation;
+  gkVerwJahr+=g.verwaltung;
+ });
+ const allGK=gkInstJahr+gkVerwJahr; // Gesamte Betriebskosten (ohne Material)
+
+ // Zuschlagssatz (% auf Fertigungslohn, nur Installation-Anteil, für Anzeige)
+ const overheadPct=installBase?((gkInstJahr+gkVerwJahr)/installBase*100):0;
+ const lohngeb=(groupTotals.find(g=>g.group==="lohngebundene GK")||{}).installation||0;
+ const lohnneb=(groupTotals.find(g=>g.group==="Lohnnebenkosten")||{}).installation||0;
+ const lohnun=(groupTotals.find(g=>g.group==="lohnunabhängige GK")||{}).installation||0;
+
  renderZuschlagTable(groupTotals, installBase, matBase);
- const hourly=mixed+(mixed*overheadPct/100); const hourlyProfit=hourly*(1+n("profit")/100); const minute=hourlyProfit/60;
- // Materialfaktor: GK-Faktor × (1 + Material-Zusatzgewinn%) × (1 + allg. Gewinn%)
+
+ // ── KORREKTER BETRIEBSSTUNDENSATZ (BAB / Perko-Methode) ──
+ // Selbstkosten/Jahr = Fertigungslohn (BAB) + lohngebundene GK + lohnunabh. GK + Verwaltung
+ // NICHT: mixed × (1 + overhead%) → das würde SV doppelt zählen!
+ const prodHours=n("productiveHours")||totalProductive||1;
+ const selbstkostenJahr=installBase+allGK;
+ const selbstkostenStd=selbstkostenJahr/prodHours;
+ const hourlyProfit=selbstkostenStd*(1+n("profit")/100);
+ const minute=hourlyProfit/60;
+
+ // Materialzuschlag inkl. Gewinn
  const mf=n("matFactor")*(1+n("matProfit")/100)*(1+n("profit")/100);
- const matSell=n("matCost")*mf; const labor=n("minutes")*minute; const bab=n("productiveHours")?(installBase+allGK)/n("productiveHours"):0;
- document.getElementById("hourlyRate").textContent=eur(hourlyProfit)+"/Std."; document.getElementById("minuteRate").textContent=eur(minute)+"/min"; document.getElementById("mixedWage").textContent=eur(mixed); document.getElementById("payrollTotal").textContent=eur(totalPayroll); document.getElementById("payrollProductive").textContent=totalProductive.toLocaleString('de-DE',{maximumFractionDigits:1})+" h"; document.getElementById("matSurcharge").textContent=pct((mf-1)*100); document.getElementById("babHourly").textContent=eur(bab)+"/Std."; document.getElementById("laborPrice").textContent=eur(labor); document.getElementById("matSell").textContent=eur(matSell); document.getElementById("totalPrice").textContent=eur(labor+matSell); groupTotals.forEach((g,i)=>{const el=document.getElementById("g"+i);if(el)el.innerHTML=`Installation: ${eur(g.installation)}<br>Verwaltung: ${eur(g.verwaltung)}<br>Material: ${eur(g.material)}`;})
- const veh=syncVehicleToBAB(); setText("vehDep",eur(veh.dep)); setText("shelfDep",eur(veh.shelf)); setText("vehFixedYear",eur(veh.fixed)); setText("vehVariableYear",eur(veh.variableYear)); setText("vehTotalYear",eur(veh.totalYear)+" (separat)"); setText("vehKmFull",eur(veh.fullKm)+"/km"); setText("vehKmYear",veh.kmYear.toLocaleString('de-DE',{maximumFractionDigits:0})+" km"); setText("vehFixedKm",eur(veh.fixedKm)+"/km"); setText("vehVarKm",eur(veh.varKm)+"/km"); setText("vehDayCost",eur(veh.dayCost)+"/Tag"); setText("vehHourCost",eur(veh.hourCost)+"/h");
+ const matSell=n("matCost")*mf;
+ const labor=n("minutes")*minute;
+ const bab=selbstkostenStd; // Selbstkosten ohne Gewinn
+ document.getElementById("hourlyRate").textContent=eur(hourlyProfit)+"/Std.";
+ document.getElementById("minuteRate").textContent=eur(minute)+"/min";
+ document.getElementById("mixedWage").textContent=eur(avgBrutto);
+ document.getElementById("payrollTotal").textContent=eur(totalPayroll);
+ document.getElementById("payrollProductive").textContent=totalProductive.toLocaleString('de-DE',{maximumFractionDigits:1})+" h";
+ document.getElementById("matSurcharge").textContent=pct((mf-1)*100);
+ document.getElementById("babHourly").textContent=eur(bab)+"/Std.";
+ document.getElementById("laborPrice").textContent=eur(labor);
+ document.getElementById("matSell").textContent=eur(matSell);
+ document.getElementById("totalPrice").textContent=eur(labor+matSell);
+ groupTotals.forEach((g,i)=>{const el=document.getElementById("g"+i);if(el)el.innerHTML=`Installation: ${eur(g.installation)}<br>Verwaltung: ${eur(g.verwaltung)}<br>Material: ${eur(g.material)}`;}); const veh=syncVehicleToBAB(); setText("vehDep",eur(veh.dep)); setText("shelfDep",eur(veh.shelf)); setText("vehFixedYear",eur(veh.fixed)); setText("vehVariableYear",eur(veh.variableYear)); setText("vehTotalYear",eur(veh.totalYear)+" (separat)"); setText("vehKmFull",eur(veh.fullKm)+"/km"); setText("vehKmYear",veh.kmYear.toLocaleString('de-DE',{maximumFractionDigits:0})+" km"); setText("vehFixedKm",eur(veh.fixedKm)+"/km"); setText("vehVarKm",eur(veh.varKm)+"/km"); setText("vehDayCost",eur(veh.dayCost)+"/Tag"); setText("vehHourCost",eur(veh.hourCost)+"/h");
  const mDep=(n("machPurchase")-n("machRest"))/(n("machYears")||1); const mFixed=mDep+n("machServiceYear")+n("machInsuranceYear")+n("machFinanceYear"); const mFixedHour=n("machHoursYear")?mFixed/n("machHoursYear"):0; const mVarHour=n("machEnergyHour")+n("machConsumablesHour")+n("machRepairHour"); const mInternalHour=mFixedHour+mVarHour; const mSellHour=mInternalHour*(1+n("machProfit")/100); const mMin=mSellHour/60; setText("machDep",eur(mDep)); setText("machFixedYear",eur(mFixed)); setText("machFixedHour",eur(mFixedHour)+"/h"); setText("machVarHour",eur(mVarHour)+"/h"); setText("machHour",eur(mSellHour)+"/h"); setText("machMinute",eur(mMin)+"/min");
  const qMatFactor=n("qMatFactor")||n("matFactor")||1;
- const posTotals=calcPositionsTotals(minute,mixed,qMatFactor,mMin,mInternalHour,n("profit"));
+ // Angebot: minute = VK-Satz (inkl. GK+Gewinn), selbstkostenStd = interne Kosten/h
+ const posTotals=calcPositionsTotals(minute,selbstkostenStd,qMatFactor,mMin,mInternalHour,n("profit"));
  const vq=calcVehicleQuote(); const qVehicleCost=vq.costTotal; const qVehicleSell=vq.costTotal; setText("qVehKmRate",eur(vq.fullKm)+"/km"); setText("qVehDayRate",eur(vq.dayCost)+"/Tag"); setText("qVehCostKm",eur(vq.costKm)); setText("qVehCostDay",eur(vq.costDay)); setText("qVehTotal",eur(vq.costTotal)); setText("qVehTotal2",eur(vq.costTotal));
  const qOther=n("qOther"); const qRiskPct=n("qRiskPct"); const qDiscountPct=n("qDiscountPct");
  const qSub=posTotals.materialSell+posTotals.laborSell+posTotals.machineSell+qVehicleSell+qOther;
