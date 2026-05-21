@@ -85,32 +85,7 @@ function calcApprenticeCost(e){
  return {gross,total,attendanceHours,productiveHours,productiveCost,unproductiveCost,costPerAttendance:attendanceHours?total/attendanceHours:0,costPerProductive:productiveHours?total/productiveHours:0,trainingHours,trainingCost};
 }
 function empField(e,k,label,type="text"){return `<div><label>${label}</label><input type="${type}" inputmode="decimal" value="${e[k]??''}" oninput="updEmp(${e.id},'${k}',this.value)" onblur="renderEmployees()"></div>`}
-function renderEmployees(){document.getElementById("employees").innerHTML=employees.map(e=>{const r=e.type==="apprentice"?calcApprenticeCost(e):calcEmployeeCost(e);return `<div class="card emp-card"><div class="grid"><div><label>Name</label><input value="${e.name}" oninput="updEmp(${e.id},'name',this.value)"></div><div><label>Typ</label><select onchange="updEmp(${e.id},'type',this.value)"><option value="journey" ${e.type!=="apprentice"?"selected":""}>Geselle/Mitarbeiter</option><option value="apprentice" ${e.type==="apprentice"?"selected":""}>Lehrling</option></select></div>${empField(e,'count','Anzahl')}</div><div class="grid">${e.type==="apprentice"?`${empField(e,'monthlyPay','Monatsvergütung €')}${empField(e,'vmwl','VWL €/Monat')}${empField(e,'dailyHours','Std./Tag')}${empField(e,'paidDays','Bezahlte Arbeitstage')}${empField(e,'vacationDays','Urlaubstage')}${empField(e,'holidays','Feiertage')}${empField(e,'sickDays','Krankheitstage')}${empField(e,'specialLeaveDays','Sonderurlaub')}${empField(e,'christmasPayPct','Sonderzahlung %')}${empField(e,'externalTrainingHours','Überbetr. Ausbildung h')}${empField(e,'vocationalSchoolHours','Berufsschule h')}${empField(e,'internalTrainingHours','Betriebl. Schulung h')}${empField(e,'generalApprenticePct','Allg. Lehrlingskosten %')}${empField(e,'trainerHourlyCost','Ausbilderkosten €/h')}${empField(e,'trainerHours','Ausbilderstunden')}`:`${empField(e,'hourly','Stundenlohn €')}${empField(e,'dailyHours','Std./Tag')}${empField(e,'paidDays','Bezahlte Arbeitstage')}${empField(e,'vacationDays','Urlaubstage')}${empField(e,'holidays','Feiertage')}${empField(e,'sickDays','Krankheitstage')}${empField(e,'specialLeaveDays','Sonderurlaub')}${empField(e,'holidayPayPct','Urlaubsgeld %')}${empField(e,'christmasPayPct','Weihnachtsgeld %')}${empField(e,'nonBillablePct','Nicht verrechenbar %')}${empField(e,'productivity','Produktivität %')}`}</div><details><summary>Sozialversicherung / Umlagen wie Perko</summary><div class="grid">${empField(e,'pensionPct','Rentenversicherung %')}${empField(e,'healthPct','Krankenversicherung %')}${empField(e,'unemploymentPct','Arbeitslosenvers. %')}${empField(e,'carePct','Pflegeversicherung %')}${empField(e,'accidentPct','Unfallversicherung %')}${empField(e,'efgUmlagePct','EFG-Umlage %')}${empField(e,'efgRefundPct','EFG-Erstattung %')}${e.type!=="apprentice"?empField(e,'otherLegalPct','Sonstige gesetzl. %')+empField(e,'companyAddonPct','Betriebl. Zusatzkosten %'):''}</div></details><div class="grid result-row"><div><span class="muted">Jahres-Brutto</span><b>${eur(r.gross)}</b></div><div><span class="muted">Personalkosten/Jahr</span><b>${eur(r.total)}</b></div><div><span class="muted">Produktive Std.</span><b>${r.productiveHours.toLocaleString('de-DE',{maximumFractionDigits:1})} h</b></div><div><span class="muted">Kosten/prod. Std.</span><b>${eur(r.costPerProductive)}/h</b></div></div>
-<div style="margin-top:10px;padding:12px;background:var(--surface2);border-radius:10px;border:1px solid var(--border)">
-<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px">📐 Stundensatz-Herleitung (nur Personalkosten, ohne Betriebs-GK)</div>
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:6px">
-<div style="background:#fff;border-radius:7px;padding:8px;border:1px solid var(--border)">
-<div style="font-size:10px;color:var(--muted);text-transform:uppercase">① Brutto-Std.</div>
-<div style="font-size:17px;font-weight:700;font-family:'DM Mono',monospace">${eur(e.type==="apprentice"?r.gross/(r.attendanceHours||1):num(e.hourly))}</div>
-<div style="font-size:10px;color:var(--muted)">${e.type==="apprentice"?"Brutto/Anwes.-Std.":"eingegebener Lohn"}</div>
-</div>
-<div style="background:#eef3f8;border-radius:7px;padding:8px;border:1px solid var(--blue-border)">
-<div style="font-size:10px;color:var(--blue);text-transform:uppercase">② + Nebenkosten</div>
-<div style="font-size:17px;font-weight:700;font-family:'DM Mono',monospace;color:var(--blue)">${eur((r.total-r.gross)/(r.productiveHours||1))}/h</div>
-<div style="font-size:10px;color:var(--muted)">SV+BG+EFG / prod.h</div>
-</div>
-<div style="background:#f4f1ee;border-radius:7px;padding:8px;border:1px solid var(--border)">
-<div style="font-size:10px;color:var(--muted);text-transform:uppercase">③ + Leerzeiten</div>
-<div style="font-size:17px;font-weight:700;font-family:'DM Mono',monospace">${eur(Math.max(0,r.costPerProductive-(r.attendanceHours?r.total/r.attendanceHours:0)))}/h</div>
-<div style="font-size:10px;color:var(--muted)">Urlaub/Krank/unproduktiv</div>
-</div>
-<div style="background:var(--surface2);border-radius:7px;padding:8px;border:2px solid var(--accent)">
-<div style="font-size:10px;color:var(--accent);text-transform:uppercase">= Selbstkosten</div>
-<div style="font-size:17px;font-weight:700;font-family:'DM Mono',monospace;color:var(--accent)">${eur(r.costPerProductive)}/h</div>
-<div style="font-size:10px;color:var(--muted)">Vollkosten dieser Person</div>
-</div>
-</div>
-</div><button class="danger" onclick="employees=employees.filter(x=>x.id!==${e.id});renderEmployees();calcAll()">Löschen</button></div>`}).join("")}
+function renderEmployees(){document.getElementById("employees").innerHTML=employees.map(e=>{const r=e.type==="apprentice"?calcApprenticeCost(e):calcEmployeeCost(e);return `<div class="card emp-card"><div class="grid"><div><label>Name</label><input value="${e.name}" oninput="updEmp(${e.id},'name',this.value)"></div><div><label>Typ</label><select onchange="updEmp(${e.id},'type',this.value)"><option value="journey" ${e.type!=="apprentice"?"selected":""}>Geselle/Mitarbeiter</option><option value="apprentice" ${e.type==="apprentice"?"selected":""}>Lehrling</option></select></div>${empField(e,'count','Anzahl')}</div><div class="grid">${e.type==="apprentice"?`${empField(e,'monthlyPay','Monatsvergütung €')}${empField(e,'vmwl','VWL €/Monat')}${empField(e,'dailyHours','Std./Tag')}${empField(e,'paidDays','Bezahlte Arbeitstage')}${empField(e,'vacationDays','Urlaubstage')}${empField(e,'holidays','Feiertage')}${empField(e,'sickDays','Krankheitstage')}${empField(e,'specialLeaveDays','Sonderurlaub')}${empField(e,'christmasPayPct','Sonderzahlung %')}${empField(e,'externalTrainingHours','Überbetr. Ausbildung h')}${empField(e,'vocationalSchoolHours','Berufsschule h')}${empField(e,'internalTrainingHours','Betriebl. Schulung h')}${empField(e,'generalApprenticePct','Allg. Lehrlingskosten %')}${empField(e,'trainerHourlyCost','Ausbilderkosten €/h')}${empField(e,'trainerHours','Ausbilderstunden')}`:`${empField(e,'hourly','Stundenlohn €')}${empField(e,'dailyHours','Std./Tag')}${empField(e,'paidDays','Bezahlte Arbeitstage')}${empField(e,'vacationDays','Urlaubstage')}${empField(e,'holidays','Feiertage')}${empField(e,'sickDays','Krankheitstage')}${empField(e,'specialLeaveDays','Sonderurlaub')}${empField(e,'holidayPayPct','Urlaubsgeld %')}${empField(e,'christmasPayPct','Weihnachtsgeld %')}${empField(e,'nonBillablePct','Nicht verrechenbar %')}${empField(e,'productivity','Produktivität %')}`}</div><details><summary>Sozialversicherung / Umlagen wie Perko</summary><div class="grid">${empField(e,'pensionPct','Rentenversicherung %')}${empField(e,'healthPct','Krankenversicherung %')}${empField(e,'unemploymentPct','Arbeitslosenvers. %')}${empField(e,'carePct','Pflegeversicherung %')}${empField(e,'accidentPct','Unfallversicherung %')}${empField(e,'efgUmlagePct','EFG-Umlage %')}${empField(e,'efgRefundPct','EFG-Erstattung %')}${e.type!=="apprentice"?empField(e,'otherLegalPct','Sonstige gesetzl. %')+empField(e,'companyAddonPct','Betriebl. Zusatzkosten %'):''}</div></details><div class="grid result-row"><div><span class="muted">Jahres-Brutto</span><b>${eur(r.gross)}</b></div><div><span class="muted">Personalkosten/Jahr</span><b>${eur(r.total)}</b></div><div><span class="muted">Produktive Std.</span><b>${r.productiveHours.toLocaleString('de-DE',{maximumFractionDigits:1})} h</b></div><div><span class="muted">Kosten/prod. Std.</span><b>${eur(r.costPerProductive)}/h</b></div></div><button class="danger" onclick="employees=employees.filter(x=>x.id!==${e.id});renderEmployees();calcAll()">Löschen</button></div>`}).join("")}
 function updEmp(id,k,v){let r=employees.find(x=>x.id===id);r[k]=k==='name'||k==='type'?v:num(v); if(k==='type'&&v==='apprentice'){Object.assign(r,{monthlyPay:r.monthlyPay||950,vmwl:r.vmwl||12,generalApprenticePct:r.generalApprenticePct||25,trainerHourlyCost:r.trainerHourlyCost||20,trainerHours:r.trainerHours||100,externalTrainingHours:r.externalTrainingHours||150,vocationalSchoolHours:r.vocationalSchoolHours||450,internalTrainingHours:r.internalTrainingHours||300})} if(k==='type') renderEmployees();calcAll()}
 function addEmployee(){employees.push({id:Date.now(),type:"journey",name:"Mitarbeiter",count:1,hourly:18,productivity:100,...defaultPayroll});renderEmployees();calcAll()}
 function addApprentice(){employees.push({id:Date.now(),type:"apprentice",name:"Lehrling",count:1,monthlyPay:950,vmwl:12,dailyHours:8,paidDays:261,holidays:10,vacationDays:30,specialLeaveDays:2,sickDays:7,holidayPayPct:0,christmasPayPct:10,pensionPct:18.6,healthPct:14.6,unemploymentPct:2.6,carePct:3.4,accidentPct:2.85,efgUmlagePct:2.9,efgRefundPct:70,generalApprenticePct:25,trainerHourlyCost:20,trainerHours:100,externalTrainingHours:150,vocationalSchoolHours:450,internalTrainingHours:300});renderEmployees();calcAll()}
@@ -179,6 +154,7 @@ function updRow(id,k,v,autoFill=null){
   const other=fields.filter(f=>f!==k&&f!==autoFill);
   const sum=num(r[k])+(other.length?num(r[other[0]]):0);
   r[autoFill]=Math.max(0,Math.round((100-sum)*100)/100);
+  if(r.auto) r._manualDist=true; // merken: user hat manuell geändert
   renderCostRows();
  }
  calcAll();
@@ -215,33 +191,42 @@ function payrollBABSplit(){
  const staffLG=staff.map(calcLohngebunden);
  const appLG=app.map(calcLohngebunden);
  const sum=(arr,k)=>arr.reduce((s,r)=>s+num(r[k]),0);
- // Fertigungslohn (Brutto-Anteil produktiv) = gross * productiveHours/attendanceHours
- const productiveStaffGross=staffCosts.reduce((s,r,i)=>{
-  const lg=staffLG[i];
-  const ratio=r.attendanceHours?Math.min(r.productiveHours/r.attendanceHours,1):0;
-  return s+lg.gross*ratio;
- },0);
- const productiveAppGross=appCosts.reduce((s,r,i)=>{
-  const lg=appLG[i];
-  const ratio=r.attendanceHours?Math.min(r.productiveHours/r.attendanceHours,1):0;
-  return s+lg.gross*ratio;
- },0);
- const unproductiveStaffGross=staffCosts.reduce((s,r,i)=>{
-  const lg=staffLG[i];
-  const ratio=r.attendanceHours?Math.min(r.productiveHours/r.attendanceHours,1):0;
-  return s+lg.gross*(1-ratio);
- },0);
- const unproductiveAppGross=appCosts.reduce((s,r,i)=>{
-  const lg=appLG[i];
-  const ratio=r.attendanceHours?Math.min(r.productiveHours/r.attendanceHours,1):0;
-  return s+lg.gross*(1-ratio);
- },0);
- // lohngebundene GK gesamt (nicht aufgeteilt produktiv/unproduktiv – klassischer BAB)
- const lgSV=sum(staffLG,'social')+sum(appLG,'social');
+
+ // Produktiv-Ratio je Mitarbeiter
+ const ratio=r=>r.attendanceHours?Math.min(r.productiveHours/r.attendanceHours,1):0;
+
+ // Fertigungslohn (Brutto produktiv / unproduktiv)
+ const productiveStaffGross=staffCosts.reduce((s,r,i)=>s+staffLG[i].gross*ratio(r),0);
+ const productiveAppGross=appCosts.reduce((s,r,i)=>s+appLG[i].gross*ratio(r),0);
+ const unproductiveStaffGross=staffCosts.reduce((s,r,i)=>s+staffLG[i].gross*(1-ratio(r)),0);
+ const unproductiveAppGross=appCosts.reduce((s,r,i)=>s+appLG[i].gross*(1-ratio(r)),0);
+
+ // ── SV KORREKT AUFTEILEN nach produktiv/unproduktiv ──
+ // SV auf produktiven Lohn  → 100% Installation
+ // SV auf unproduktiven Lohn → 70% Installation / 30% Verwaltung
+ let lgSVprod=0, lgSVunprod=0;
+ [...staffCosts.map((r,i)=>({r,lg:staffLG[i]})),
+  ...appCosts.map((r,i)=>({r,lg:appLG[i]}))]
+ .forEach(({r,lg})=>{
+  const p=ratio(r);
+  lgSVprod +=lg.social*p;
+  lgSVunprod+=lg.social*(1-p);
+ });
+
+ // BG + EFG → immer 100% Installation (direkt produktionsbezogen)
  const lgAccident=sum(staffLG,'accident')+sum(appLG,'accident');
- const lgEFG=sum(staffLG,'efg')+sum(appLG,'efg');
- const lgOther=sum(staffLG,'otherLegal')+sum(appLG,'otherLegal');
- const lgCompany=sum(staffLG,'company')+sum(appLG,'company');
+ const lgEFG    =sum(staffLG,'efg')     +sum(appLG,'efg');
+
+ // Sonstige + betriebliche → nach Durchschnitts-Ratio aufteilen
+ const allCosts=[...staffCosts,...appCosts];
+ const avgRatio=allCosts.length?allCosts.reduce((s,r)=>s+ratio(r),0)/allCosts.length:1;
+ const lgOtherTotal  =sum(staffLG,'otherLegal')+sum(appLG,'otherLegal');
+ const lgCompanyTotal=sum(staffLG,'company')   +sum(appLG,'company');
+ const lgOtherProd  =lgOtherTotal  *avgRatio;
+ const lgOtherUnprod=lgOtherTotal  *(1-avgRatio);
+ const lgCompProd   =lgCompanyTotal*avgRatio;
+ const lgCompUnprod =lgCompanyTotal*(1-avgRatio);
+
  return {
   productiveStaff:productiveStaffGross,
   productiveApprentice:productiveAppGross,
@@ -249,16 +234,64 @@ function payrollBABSplit(){
   unproductiveApprentice:unproductiveAppGross,
   productiveHours:sum(staffCosts,'productiveHours')+sum(appCosts,'productiveHours'),
   totalPayroll:sum(staffCosts,'total')+sum(appCosts,'total'),
-  lgSV, lgAccident, lgEFG, lgOther, lgCompany
+  lgSVprod, lgSVunprod,
+  lgAccident, lgEFG,
+  lgOtherProd, lgOtherUnprod,
+  lgCompProd, lgCompUnprod,
+  // Summen für Rückwärtskompatibilität
+  lgSV:lgSVprod+lgSVunprod,
+  lgOther:lgOtherTotal,
+  lgCompany:lgCompanyTotal
  };
 }
 function setAutoBABRow(auto,group,name,amount,installation=70,verwaltung=30,material=0){
  let r=costRows.find(x=>x.auto===auto);
- if(!r){r={id:Date.now()+Math.floor(Math.random()*1000),auto,group,name,amount:0,calc:'automatisch aus Personal',installation,verwaltung,material}; costRows.unshift(r);}
+ if(!r){
+  r={id:Date.now()+Math.floor(Math.random()*1000),auto,group,name,
+     amount:0,calc:'automatisch aus Personal',
+     installation,verwaltung,material,_manualDist:false};
+  costRows.unshift(r);
+ }
  r.group=group; r.name=name; r.amount=round2(amount); r.calc='automatisch aus Personal';
- const el=document.getElementById('rowAmount_'+r.id); if(el && document.activeElement!==el) el.value=round2(r.amount);
+ // Verteilung nur aktualisieren wenn nicht manuell geändert
+ if(!r._manualDist){r.installation=installation; r.verwaltung=verwaltung; r.material=material;}
+ const el=document.getElementById('rowAmount_'+r.id);
+ if(el && document.activeElement!==el) el.value=round2(r.amount);
  return r;
 }
+
+function syncPayrollToBABAuto(updateProductiveHours=true){
+ const s=payrollBABSplit();
+
+ // ── EINZELKOSTEN: Fertigungslohn Brutto (produktiv) ──
+ setAutoBABRow('productivePayroll',  'Einzelkosten','Fertigungslohn (Brutto) produktive Mitarbeiter',s.productiveStaff,  100,0,0);
+ setAutoBABRow('productiveApprentice','Einzelkosten','Fertigungslohn (Brutto) produktive Lehrlinge',  s.productiveApprentice,100,0,0);
+
+ // ── LOHNGEBUNDENE GK: korrekt nach produktiv/unproduktiv aufgeteilt ──
+ // SV auf produktiven Lohn  → 100% Installation / 0% Verwaltung
+ setAutoBABRow('lgSVprod',   'lohngebundene GK','SV AG-Anteil auf Fertigungslohn (produktiv)',   s.lgSVprod,  100,0,0);
+ // SV auf unproduktiven Lohn → 70% Installation / 30% Verwaltung
+ setAutoBABRow('lgSVunprod', 'lohngebundene GK','SV AG-Anteil auf Hilfslöhne (unproduktiv)',     s.lgSVunprod, 70,30,0);
+ // BG + EFG → 100% Installation (direkt produktionsbezogen)
+ setAutoBABRow('lgAccident', 'lohngebundene GK','Berufsgenossenschaft / Unfallversicherung',     s.lgAccident,100,0,0);
+ setAutoBABRow('lgEFG',      'lohngebundene GK','EFG-Umlage abzgl. Erstattung',                  s.lgEFG,     100,0,0);
+ // Sonstige gesetzl. → nach Produktiv-Ratio aufgeteilt
+ setAutoBABRow('lgOtherProd',  'lohngebundene GK','Sonstige gesetzl. Nebenkosten (produktiver Anteil)',  s.lgOtherProd, 100,0,0);
+ setAutoBABRow('lgOtherUnprod','lohngebundene GK','Sonstige gesetzl. Nebenkosten (unproduktiver Anteil)',s.lgOtherUnprod,70,30,0);
+ // Betriebliche Zusatzkosten → nach Produktiv-Ratio
+ setAutoBABRow('lgCompProd',  'lohngebundene GK','Betriebliche Zusatzkosten (produktiver Anteil)',  s.lgCompProd, 100,0,0);
+ setAutoBABRow('lgCompUnprod','lohngebundene GK','Betriebliche Zusatzkosten (unproduktiver Anteil)',s.lgCompUnprod,70,30,0);
+
+ // ── LOHNUNABHÄNGIGE GK: unproduktive Bruttolöhne ──
+ setAutoBABRow('unproductivePayroll',  'lohnunabhängige GK','Bruttolohn unproduktive Mitarbeiteranteile',s.unproductiveStaff,  70,30,0);
+ setAutoBABRow('unproductiveApprentice','lohnunabhängige GK','Bruttolohn unproduktive Lehrlingsanteile', s.unproductiveApprentice,70,30,0);
+
+ const ph=document.getElementById('productiveHours');
+ if(updateProductiveHours && ph && document.activeElement!==ph) ph.value=round2(s.productiveHours);
+ return s;
+}
+function syncPayrollToBAB(){syncPayrollToBABAuto(true); renderCostRows(); calcAll();}
+
 function calcGFRate(){
  const monthlyWage=n("gfMonthlyWage")||5000;
  const workDays=n("gfWorkDays")||220;
@@ -278,27 +311,6 @@ function calcGFRate(){
  setText("gfSellRate",eur(sellRate)+"/h");
  setText("gfMinRate",eur(minRate)+"/min");
 }
-
-function syncPayrollToBABAuto(updateProductiveHours=true){
- const s=payrollBABSplit();
- // Einzelkosten – produktive Lohnkosten
- setAutoBABRow('productivePayroll','Einzelkosten','Fertigungslohn (Brutto) produktive Mitarbeiter',s.productiveStaff,100,0,0);
- setAutoBABRow('productiveApprentice','Einzelkosten','Fertigungslohn (Brutto) produktive Lehrlinge',s.productiveApprentice,100,0,0);
- // lohngebundene GK – Sozialversicherung & Nebenkosten (automatisch aus Personal)
-  setAutoBABRow('lgSV','lohngebundene GK','SV AG-Anteil (RV+KV+AV+PV) alle MA+Azubi',s.lgSV,100,0,0);
- setAutoBABRow('lgAccident','lohngebundene GK','Berufsgenossenschaft / Unfallversicherung alle MA+Azubi',s.lgAccident,100,0,0);
- setAutoBABRow('lgEFG','lohngebundene GK','EFG-Umlage abzgl. Erstattung alle MA+Azubi',s.lgEFG,100,0,0);
- setAutoBABRow('lgOther','lohngebundene GK','Sonstige gesetzl. Lohnnebenkosten (MA)',s.lgOther,100,0,0);
- setAutoBABRow('lgCompany','lohngebundene GK','Betriebliche Zusatzkosten MA (bAV etc.)',s.lgCompany,100,0,0);
- // lohnunabhängige GK – unproduktive Anteile
- setAutoBABRow('unproductivePayroll','lohnunabhängige GK','Bruttolohn unproduktive Mitarbeiteranteile',s.unproductiveStaff,70,30,0);
- setAutoBABRow('unproductiveApprentice','lohnunabhängige GK','Bruttolohn unproduktive Lehrlingsanteile',s.unproductiveApprentice,70,30,0);
- const ph=document.getElementById('productiveHours'); if(updateProductiveHours && ph && document.activeElement!==ph) ph.value=round2(s.productiveHours);
- return s;
-}
-function syncPayrollToBAB(){syncPayrollToBABAuto(true); renderCostRows(); calcAll();}
-
-
 
 function setText(id,value){const el=document.getElementById(id); if(el) el.textContent=value;}
 
@@ -716,19 +728,20 @@ function calcAll(){
 
  renderZuschlagTable(groupTotals, installBase, matBase);
 
+ // GK-Zuschlag pro produktiver Stunde (aus BAB, für MA-Tabelle)
+ const gkZuschlagStd = prodHours ? allGK/prodHours : 0;
+
+ // Tabelle: Stundensatz je Mitarbeiter
+ renderEmpRateTable(empResults, employees, gkZuschlagStd, n("profit"));
+
  // ── KORREKTER BETRIEBSSTUNDENSATZ (BAB / Perko-Methode) ──
- // Selbstkosten/Jahr = Fertigungslohn (BAB) + alle GK (Inst.+Verw.) — KEIN double-counting
+ // Selbstkosten/Jahr = Fertigungslohn (BAB) + lohngebundene GK + lohnunabh. GK + Verwaltung
+ // NICHT: mixed × (1 + overhead%) → das würde SV doppelt zählen!
  const prodHours=n("productiveHours")||totalProductive||1;
  const selbstkostenJahr=installBase+allGK;
  const selbstkostenStd=selbstkostenJahr/prodHours;
  const hourlyProfit=selbstkostenStd*(1+n("profit")/100);
  const minute=hourlyProfit/60;
-
- // GK-Zuschlag pro produktiver Stunde (aus BAB, für MA-Tabelle)
- const gkZuschlagStd=prodHours?allGK/prodHours:0;
-
- // Tabelle: Stundensatz je Mitarbeiter
- renderEmpRateTable(empResults, employees, gkZuschlagStd, n("profit"));
 
  // Materialzuschlag inkl. Gewinn
  const mf=n("matFactor")*(1+n("matProfit")/100)*(1+n("profit")/100);
