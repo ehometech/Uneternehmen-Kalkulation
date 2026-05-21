@@ -286,7 +286,7 @@
 
       <div class="card" style="margin-top:12px;background:var(--surface2)">
         <div class="grid">
-          <div><div class="muted small">Ø Bruttostundenlohn (gewichtet)</div><b class="mono" id="mixedWage">0,00 €/h</b><div class="input-hint">Fertigungslohn ÷ produktive Stunden</div></div>
+          <div><div class="muted small">Gemischter Personalkostensatz</div><b class="mono" id="mixedWage">0,00 €/h</b></div>
           <div><div class="muted small">Personalkosten gesamt / Jahr</div><b class="mono" id="payrollTotal">0,00 €</b></div>
           <div><div class="muted small">Produktive Stunden gesamt</div><b class="mono" id="payrollProductive">0 h</b></div>
         </div>
@@ -358,22 +358,53 @@
   <!-- ===== SECTION 3: ERGEBNIS / STUNDENSATZ ===== -->
   <div id="sec-ergebnis" class="section">
 
+    <!-- KPI Hauptergebnis -->
     <div class="kpi-grid">
       <div class="kpi-card highlight">
-        <div class="kpi-label">Stundenverrechnungssatz</div>
+        <div class="kpi-label">⌀ Stundenverrechnungssatz (Betrieb)</div>
         <div class="kpi-val" id="hourlyRate">0,00 €</div>
+        <div class="muted small" style="margin-top:4px">inkl. aller Zuschläge + Gewinn</div>
       </div>
       <div class="kpi-card highlight">
         <div class="kpi-label">Minutenverrechnungssatz</div>
         <div class="kpi-val" id="minuteRate">0,00 €</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">BAB-Stundensatz</div>
+        <div class="kpi-label">Selbstkosten / Std. (ohne Gewinn)</div>
         <div class="kpi-val" id="babHourly">0,00 €</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Materialzuschlag</div>
         <div class="kpi-val" id="matSurcharge">0,00 %</div>
+      </div>
+    </div>
+
+    <!-- Stundensatz pro Mitarbeiter -->
+    <div class="card">
+      <div class="card-title">Stundensatz-Übersicht je Mitarbeiter</div>
+      <div class="card-sub">Zeigt Bruttolohn, alle Zuschläge und den finalen Verrechnungssatz für jeden Mitarbeiter einzeln – plus den gewichteten Betriebsdurchschnitt.</div>
+      <div class="scroll">
+        <table id="empRateTable">
+          <thead>
+            <tr>
+              <th>Mitarbeiter</th>
+              <th class="right">Brutto €/h</th>
+              <th class="right" style="color:var(--blue)">+ Lohnnebenkost. €/h</th>
+              <th class="right" style="color:#7a4e00">+ Leerzeiten €/h</th>
+              <th class="right">= Selbstkosten €/h</th>
+              <th class="right" style="color:var(--accent)">+ GK-Zuschlag €/h</th>
+              <th class="right" style="color:var(--green)">+ Gewinn €/h</th>
+              <th class="right" style="font-weight:700;color:var(--accent)">VK-Satz €/h</th>
+              <th class="right">VK-Satz €/min</th>
+            </tr>
+          </thead>
+          <tbody id="empRateBody"></tbody>
+        </table>
+      </div>
+      <div class="info-box" style="margin-top:10px">
+        💡 <b>Lohnnebenkosten:</b> SV (AG), BG, EFG, gesetzl. Nebenkosten &nbsp;|&nbsp;
+        <b>Leerzeiten:</b> Urlaub, Feiertage, Krankheit, unproduktive Zeit &nbsp;|&nbsp;
+        <b>GK-Zuschlag:</b> Miete, Büro, Fahrzeug etc. aus BAB
       </div>
     </div>
 

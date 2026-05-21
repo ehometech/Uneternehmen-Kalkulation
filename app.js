@@ -85,32 +85,7 @@ function calcApprenticeCost(e){
  return {gross,total,attendanceHours,productiveHours,productiveCost,unproductiveCost,costPerAttendance:attendanceHours?total/attendanceHours:0,costPerProductive:productiveHours?total/productiveHours:0,trainingHours,trainingCost};
 }
 function empField(e,k,label,type="text"){return `<div><label>${label}</label><input type="${type}" inputmode="decimal" value="${e[k]??''}" oninput="updEmp(${e.id},'${k}',this.value)" onblur="renderEmployees()"></div>`}
-function renderEmployees(){document.getElementById("employees").innerHTML=employees.map(e=>{const r=e.type==="apprentice"?calcApprenticeCost(e):calcEmployeeCost(e);return `<div class="card emp-card"><div class="grid"><div><label>Name</label><input value="${e.name}" oninput="updEmp(${e.id},'name',this.value)"></div><div><label>Typ</label><select onchange="updEmp(${e.id},'type',this.value)"><option value="journey" ${e.type!=="apprentice"?"selected":""}>Geselle/Mitarbeiter</option><option value="apprentice" ${e.type==="apprentice"?"selected":""}>Lehrling</option></select></div>${empField(e,'count','Anzahl')}</div><div class="grid">${e.type==="apprentice"?`${empField(e,'monthlyPay','Monatsvergütung €')}${empField(e,'vmwl','VWL €/Monat')}${empField(e,'dailyHours','Std./Tag')}${empField(e,'paidDays','Bezahlte Arbeitstage')}${empField(e,'vacationDays','Urlaubstage')}${empField(e,'holidays','Feiertage')}${empField(e,'sickDays','Krankheitstage')}${empField(e,'specialLeaveDays','Sonderurlaub')}${empField(e,'christmasPayPct','Sonderzahlung %')}${empField(e,'externalTrainingHours','Überbetr. Ausbildung h')}${empField(e,'vocationalSchoolHours','Berufsschule h')}${empField(e,'internalTrainingHours','Betriebl. Schulung h')}${empField(e,'generalApprenticePct','Allg. Lehrlingskosten %')}${empField(e,'trainerHourlyCost','Ausbilderkosten €/h')}${empField(e,'trainerHours','Ausbilderstunden')}`:`${empField(e,'hourly','Stundenlohn €')}${empField(e,'dailyHours','Std./Tag')}${empField(e,'paidDays','Bezahlte Arbeitstage')}${empField(e,'vacationDays','Urlaubstage')}${empField(e,'holidays','Feiertage')}${empField(e,'sickDays','Krankheitstage')}${empField(e,'specialLeaveDays','Sonderurlaub')}${empField(e,'holidayPayPct','Urlaubsgeld %')}${empField(e,'christmasPayPct','Weihnachtsgeld %')}${empField(e,'nonBillablePct','Nicht verrechenbar %')}${empField(e,'productivity','Produktivität %')}`}</div><details><summary>Sozialversicherung / Umlagen wie Perko</summary><div class="grid">${empField(e,'pensionPct','Rentenversicherung %')}${empField(e,'healthPct','Krankenversicherung %')}${empField(e,'unemploymentPct','Arbeitslosenvers. %')}${empField(e,'carePct','Pflegeversicherung %')}${empField(e,'accidentPct','Unfallversicherung %')}${empField(e,'efgUmlagePct','EFG-Umlage %')}${empField(e,'efgRefundPct','EFG-Erstattung %')}${e.type!=="apprentice"?empField(e,'otherLegalPct','Sonstige gesetzl. %')+empField(e,'companyAddonPct','Betriebl. Zusatzkosten %'):''}</div></details><div class="grid result-row"><div><span class="muted">Jahres-Brutto</span><b>${eur(r.gross)}</b></div><div><span class="muted">Personalkosten/Jahr</span><b>${eur(r.total)}</b></div><div><span class="muted">Produktive Std.</span><b>${r.productiveHours.toLocaleString('de-DE',{maximumFractionDigits:1})} h</b></div><div><span class="muted">Kosten/prod. Std.</span><b>${eur(r.costPerProductive)}/h</b></div></div>
-<div style="margin-top:10px;padding:12px;background:var(--surface2);border-radius:10px;border:1px solid var(--border)">
-<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px">📐 Stundensatz-Herleitung für diesen Mitarbeiter</div>
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:6px;font-size:12px">
-<div style="background:#fff;border-radius:7px;padding:8px;border:1px solid var(--border)">
-  <div style="color:var(--muted);font-size:10px;text-transform:uppercase">① Brutto-Std.-lohn</div>
-  <div style="font-size:17px;font-weight:700;font-family:'DM Mono',monospace">${eur(e.type==="apprentice"?(r.gross/(r.productiveHours||1)):num(e.hourly))}</div>
-  <div style="color:var(--muted);font-size:10px">${e.type==="apprentice"?"Brutto/prod.Std.":"eingegebener Stundenlohn"}</div>
-</div>
-<div style="background:#eef3f8;border-radius:7px;padding:8px;border:1px solid var(--blue-border)">
-  <div style="color:var(--blue);font-size:10px;text-transform:uppercase">② Personalnebenkosten</div>
-  <div style="font-size:17px;font-weight:700;font-family:'DM Mono',monospace;color:var(--blue)">${eur((r.total-r.gross)/(r.productiveHours||1))}/h</div>
-  <div style="color:var(--muted);font-size:10px">SV+BG+EFG+Zulagen / prod.h</div>
-</div>
-<div style="background:#f4f1ee;border-radius:7px;padding:8px;border:1px solid var(--border)">
-  <div style="color:var(--muted);font-size:10px;text-transform:uppercase">③ Leerzeiten-Aufschlag</div>
-  <div style="font-size:17px;font-weight:700;font-family:'DM Mono',monospace">${eur((r.costPerProductive-(r.total/r.attendanceHours||0)))}/h</div>
-  <div style="color:var(--muted);font-size:10px">Urlaub/Krank/Unproduktiv</div>
-</div>
-<div style="background:var(--accent);border-radius:7px;padding:8px">
-  <div style="color:rgba(255,255,255,.75);font-size:10px;text-transform:uppercase">= Selbstkosten/Std.</div>
-  <div style="font-size:18px;font-weight:700;font-family:'DM Mono',monospace;color:#fff">${eur(r.costPerProductive)}/h</div>
-  <div style="color:rgba(255,255,255,.7);font-size:10px">Kosten/produktive Stunde</div>
-</div>
-</div>
-</div><button class="danger" onclick="employees=employees.filter(x=>x.id!==${e.id});renderEmployees();calcAll()">Löschen</button></div>`}).join("")}
+function renderEmployees(){document.getElementById("employees").innerHTML=employees.map(e=>{const r=e.type==="apprentice"?calcApprenticeCost(e):calcEmployeeCost(e);return `<div class="card emp-card"><div class="grid"><div><label>Name</label><input value="${e.name}" oninput="updEmp(${e.id},'name',this.value)"></div><div><label>Typ</label><select onchange="updEmp(${e.id},'type',this.value)"><option value="journey" ${e.type!=="apprentice"?"selected":""}>Geselle/Mitarbeiter</option><option value="apprentice" ${e.type==="apprentice"?"selected":""}>Lehrling</option></select></div>${empField(e,'count','Anzahl')}</div><div class="grid">${e.type==="apprentice"?`${empField(e,'monthlyPay','Monatsvergütung €')}${empField(e,'vmwl','VWL €/Monat')}${empField(e,'dailyHours','Std./Tag')}${empField(e,'paidDays','Bezahlte Arbeitstage')}${empField(e,'vacationDays','Urlaubstage')}${empField(e,'holidays','Feiertage')}${empField(e,'sickDays','Krankheitstage')}${empField(e,'specialLeaveDays','Sonderurlaub')}${empField(e,'christmasPayPct','Sonderzahlung %')}${empField(e,'externalTrainingHours','Überbetr. Ausbildung h')}${empField(e,'vocationalSchoolHours','Berufsschule h')}${empField(e,'internalTrainingHours','Betriebl. Schulung h')}${empField(e,'generalApprenticePct','Allg. Lehrlingskosten %')}${empField(e,'trainerHourlyCost','Ausbilderkosten €/h')}${empField(e,'trainerHours','Ausbilderstunden')}`:`${empField(e,'hourly','Stundenlohn €')}${empField(e,'dailyHours','Std./Tag')}${empField(e,'paidDays','Bezahlte Arbeitstage')}${empField(e,'vacationDays','Urlaubstage')}${empField(e,'holidays','Feiertage')}${empField(e,'sickDays','Krankheitstage')}${empField(e,'specialLeaveDays','Sonderurlaub')}${empField(e,'holidayPayPct','Urlaubsgeld %')}${empField(e,'christmasPayPct','Weihnachtsgeld %')}${empField(e,'nonBillablePct','Nicht verrechenbar %')}${empField(e,'productivity','Produktivität %')}`}</div><details><summary>Sozialversicherung / Umlagen wie Perko</summary><div class="grid">${empField(e,'pensionPct','Rentenversicherung %')}${empField(e,'healthPct','Krankenversicherung %')}${empField(e,'unemploymentPct','Arbeitslosenvers. %')}${empField(e,'carePct','Pflegeversicherung %')}${empField(e,'accidentPct','Unfallversicherung %')}${empField(e,'efgUmlagePct','EFG-Umlage %')}${empField(e,'efgRefundPct','EFG-Erstattung %')}${e.type!=="apprentice"?empField(e,'otherLegalPct','Sonstige gesetzl. %')+empField(e,'companyAddonPct','Betriebl. Zusatzkosten %'):''}</div></details><div class="grid result-row"><div><span class="muted">Jahres-Brutto</span><b>${eur(r.gross)}</b></div><div><span class="muted">Personalkosten/Jahr</span><b>${eur(r.total)}</b></div><div><span class="muted">Produktive Std.</span><b>${r.productiveHours.toLocaleString('de-DE',{maximumFractionDigits:1})} h</b></div><div><span class="muted">Kosten/prod. Std.</span><b>${eur(r.costPerProductive)}/h</b></div></div><button class="danger" onclick="employees=employees.filter(x=>x.id!==${e.id});renderEmployees();calcAll()">Löschen</button></div>`}).join("")}
 function updEmp(id,k,v){let r=employees.find(x=>x.id===id);r[k]=k==='name'||k==='type'?v:num(v); if(k==='type'&&v==='apprentice'){Object.assign(r,{monthlyPay:r.monthlyPay||950,vmwl:r.vmwl||12,generalApprenticePct:r.generalApprenticePct||25,trainerHourlyCost:r.trainerHourlyCost||20,trainerHours:r.trainerHours||100,externalTrainingHours:r.externalTrainingHours||150,vocationalSchoolHours:r.vocationalSchoolHours||450,internalTrainingHours:r.internalTrainingHours||300})} if(k==='type') renderEmployees();calcAll()}
 function addEmployee(){employees.push({id:Date.now(),type:"journey",name:"Mitarbeiter",count:1,hourly:18,productivity:100,...defaultPayroll});renderEmployees();calcAll()}
 function addApprentice(){employees.push({id:Date.now(),type:"apprentice",name:"Lehrling",count:1,monthlyPay:950,vmwl:12,dailyHours:8,paidDays:261,holidays:10,vacationDays:30,specialLeaveDays:2,sickDays:7,holidayPayPct:0,christmasPayPct:10,pensionPct:18.6,healthPct:14.6,unemploymentPct:2.6,carePct:3.4,accidentPct:2.85,efgUmlagePct:2.9,efgRefundPct:70,generalApprenticePct:25,trainerHourlyCost:20,trainerHours:100,externalTrainingHours:150,vocationalSchoolHours:450,internalTrainingHours:300});renderEmployees();calcAll()}
@@ -301,6 +276,85 @@ function syncPayrollToBAB(){syncPayrollToBABAuto(true); renderCostRows(); calcAl
 
 
 function setText(id,value){const el=document.getElementById(id); if(el) el.textContent=value;}
+
+function renderEmpRateTable(empResults, employees, gkZuschlagStd, profitPct){
+ const body=document.getElementById('empRateBody');
+ if(!body) return;
+
+ let totalProdHours=0, totalSelbstkosten=0;
+
+ const rows=empResults.map((r,i)=>{
+  const e=employees[i];
+  const ph=r.productiveHours||1;
+
+  // ① Bruttostundenlohn
+  const bruttoStd = e.type==='apprentice'
+   ? (r.gross/ph)
+   : num(e.hourly);
+
+  // ② Lohnnebenkosten/h (SV, BG, EFG, sonstige – alles außer Brutto)
+  const nebenStd = (r.total - r.gross) / ph;
+
+  // ③ Leerzeiten-Aufschlag/h (Differenz Anwesenheit zu produktiv)
+  const leerzeiten = r.costPerProductive - (r.attendanceHours ? r.total/r.attendanceHours : 0);
+
+  // ④ Selbstkosten/h (Personalvollkosten)
+  const selbstStd = r.costPerProductive;
+
+  // ⑤ GK-Zuschlag/h (aus BAB: Miete, Büro, etc. anteilig)
+  const gkStd = gkZuschlagStd;
+
+  // ⑥ Selbstkosten + GK vor Gewinn
+  const vorGewinn = selbstStd + gkStd;
+
+  // ⑦ Gewinn
+  const gewinnStd = vorGewinn * (profitPct/100);
+
+  // ⑧ VK-Stundensatz
+  const vkStd = vorGewinn * (1 + profitPct/100);
+  const vkMin = vkStd / 60;
+
+  totalProdHours += ph * (e.count||1);
+  totalSelbstkosten += r.total;
+
+  const name=e.name||'Mitarbeiter';
+  const cnt=num(e.count||1);
+
+  return `<tr>
+   <td><b>${name}</b><br><span class="muted small">${cnt}× ${e.type==='apprentice'?'Lehrling':'Geselle'}</span></td>
+   <td class="right mono"><b>${eur(bruttoStd)}</b></td>
+   <td class="right mono" style="color:var(--blue)">${eur(nebenStd)}</td>
+   <td class="right mono" style="color:#7a4e00">${eur(leerzeiten)}</td>
+   <td class="right mono"><b>${eur(selbstStd)}</b></td>
+   <td class="right mono" style="color:var(--accent)">${eur(gkStd)}</td>
+   <td class="right mono" style="color:var(--green)">${eur(gewinnStd)}</td>
+   <td class="right mono" style="font-weight:700;font-size:15px;color:var(--accent);background:var(--surface2)">${eur(vkStd)}</td>
+   <td class="right mono" style="color:var(--muted)">${eur(vkMin)}</td>
+  </tr>`;
+ }).join('');
+
+ // Durchschnittszeile
+ const avgSelbst = totalProdHours ? totalSelbstkosten/totalProdHours : 0;
+ const avgVorGewinn = avgSelbst + gkZuschlagStd;
+ const avgVK = avgVorGewinn * (1 + profitPct/100);
+ const avgNeben = empResults.reduce((s,r)=>s+(r.total-r.gross),0)/(totalProdHours||1);
+ const avgBrutto = empResults.reduce((s,r)=>s+r.gross,0)/(totalProdHours||1);
+ const avgLeer = avgSelbst - (empResults.reduce((s,r)=>s+(r.attendanceHours?r.total/r.attendanceHours:0),0)/Math.max(empResults.length,1));
+
+ const avgRow = `<tr style="background:var(--accent);color:#fff;font-weight:700">
+  <td>⌀ Betriebsdurchschnitt</td>
+  <td class="right mono" style="color:#fff">${eur(avgBrutto)}</td>
+  <td class="right mono" style="color:rgba(255,255,255,.85)">${eur(avgNeben)}</td>
+  <td class="right mono" style="color:rgba(255,255,255,.85)">${eur(Math.max(0,avgLeer))}</td>
+  <td class="right mono" style="color:#fff">${eur(avgSelbst)}</td>
+  <td class="right mono" style="color:rgba(255,255,255,.85)">${eur(gkZuschlagStd)}</td>
+  <td class="right mono" style="color:rgba(255,255,255,.85)">${eur(avgVorGewinn*profitPct/100)}</td>
+  <td class="right mono" style="font-size:17px;color:#fff">${eur(avgVK)}</td>
+  <td class="right mono" style="color:rgba(255,255,255,.85)">${eur(avgVK/60)}</td>
+ </tr>`;
+
+ body.innerHTML = rows + avgRow;
+}
 
 function renderZuschlagTable(groupTotals, installBase, matBase){
   const body=document.getElementById('zuschlagBody');
@@ -636,6 +690,12 @@ function calcAll(){
  const lohnun=(groupTotals.find(g=>g.group==="lohnunabhängige GK")||{}).installation||0;
 
  renderZuschlagTable(groupTotals, installBase, matBase);
+
+ // GK-Zuschlag pro produktiver Stunde (aus BAB, für MA-Tabelle)
+ const gkZuschlagStd = prodHours ? allGK/prodHours : 0;
+
+ // Tabelle: Stundensatz je Mitarbeiter
+ renderEmpRateTable(empResults, employees, gkZuschlagStd, n("profit"));
 
  // ── KORREKTER BETRIEBSSTUNDENSATZ (BAB / Perko-Methode) ──
  // Selbstkosten/Jahr = Fertigungslohn (BAB) + lohngebundene GK + lohnunabh. GK + Verwaltung
