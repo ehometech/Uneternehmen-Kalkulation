@@ -154,7 +154,7 @@ function updRow(id,k,v,autoFill=null){
   const other=fields.filter(f=>f!==k&&f!==autoFill);
   const sum=num(r[k])+(other.length?num(r[other[0]]):0);
   r[autoFill]=Math.max(0,Math.round((100-sum)*100)/100);
-  if(r.auto) r._manualDist=true; // merken: user hat manuell geändert
+  if(r.auto) r._manualDist=true;
   renderCostRows();
  }
  calcAll();
@@ -191,106 +191,70 @@ function payrollBABSplit(){
  const staffLG=staff.map(calcLohngebunden);
  const appLG=app.map(calcLohngebunden);
  const sum=(arr,k)=>arr.reduce((s,r)=>s+num(r[k]),0);
+ const rat=r=>r.attendanceHours?Math.min(r.productiveHours/r.attendanceHours,1):0;
 
- // Produktiv-Ratio je Mitarbeiter
- const ratio=r=>r.attendanceHours?Math.min(r.productiveHours/r.attendanceHours,1):0;
+ const productiveStaffGross=staffCosts.reduce((s,r,i)=>s+staffLG[i].gross*rat(r),0);
+ const productiveAppGross=appCosts.reduce((s,r,i)=>s+appLG[i].gross*rat(r),0);
+ const unproductiveStaffGross=staffCosts.reduce((s,r,i)=>s+staffLG[i].gross*(1-rat(r)),0);
+ const unproductiveAppGross=appCosts.reduce((s,r,i)=>s+appLG[i].gross*(1-rat(r)),0);
 
- // Fertigungslohn (Brutto produktiv / unproduktiv)
- const productiveStaffGross=staffCosts.reduce((s,r,i)=>s+staffLG[i].gross*ratio(r),0);
- const productiveAppGross=appCosts.reduce((s,r,i)=>s+appLG[i].gross*ratio(r),0);
- const unproductiveStaffGross=staffCosts.reduce((s,r,i)=>s+staffLG[i].gross*(1-ratio(r)),0);
- const unproductiveAppGross=appCosts.reduce((s,r,i)=>s+appLG[i].gross*(1-ratio(r)),0);
-
- // ── SV KORREKT AUFTEILEN nach produktiv/unproduktiv ──
- // SV auf produktiven Lohn  → 100% Installation
- // SV auf unproduktiven Lohn → 70% Installation / 30% Verwaltung
+ // SV aufteilen: produktiver Anteil → 100% Inst, unproduktiver → 70/30
  let lgSVprod=0, lgSVunprod=0;
- [...staffCosts.map((r,i)=>({r,lg:staffLG[i]})),
-  ...appCosts.map((r,i)=>({r,lg:appLG[i]}))]
- .forEach(({r,lg})=>{
-  const p=ratio(r);
-  lgSVprod +=lg.social*p;
-  lgSVunprod+=lg.social*(1-p);
- });
+ [...staffCosts.map((r,i)=>({r,lg:staffLG[i]})),...appCosts.map((r,i)=>({r,lg:appLG[i]}))]
+  .forEach(({r,lg})=>{ const p=rat(r); lgSVprod+=lg.social*p; lgSVunprod+=lg.social*(1-p); });
 
- // BG + EFG → immer 100% Installation (direkt produktionsbezogen)
+ // BG + EFG immer 100% Installation
  const lgAccident=sum(staffLG,'accident')+sum(appLG,'accident');
- const lgEFG    =sum(staffLG,'efg')     +sum(appLG,'efg');
+ const lgEFG=sum(staffLG,'efg')+sum(appLG,'efg');
 
- // Sonstige + betriebliche → nach Durchschnitts-Ratio aufteilen
- const allCosts=[...staffCosts,...appCosts];
- const avgRatio=allCosts.length?allCosts.reduce((s,r)=>s+ratio(r),0)/allCosts.length:1;
- const lgOtherTotal  =sum(staffLG,'otherLegal')+sum(appLG,'otherLegal');
- const lgCompanyTotal=sum(staffLG,'company')   +sum(appLG,'company');
- const lgOtherProd  =lgOtherTotal  *avgRatio;
- const lgOtherUnprod=lgOtherTotal  *(1-avgRatio);
- const lgCompProd   =lgCompanyTotal*avgRatio;
- const lgCompUnprod =lgCompanyTotal*(1-avgRatio);
+ // Sonstige + betriebliche nach Durchschnitts-Ratio
+ const allC=[...staffCosts,...appCosts];
+ const avgR=allC.length?allC.reduce((s,r)=>s+rat(r),0)/allC.length:1;
+ const lgOtherT=sum(staffLG,'otherLegal')+sum(appLG,'otherLegal');
+ const lgCompT=sum(staffLG,'company')+sum(appLG,'company');
 
  return {
-  productiveStaff:productiveStaffGross,
-  productiveApprentice:productiveAppGross,
-  unproductiveStaff:unproductiveStaffGross,
-  unproductiveApprentice:unproductiveAppGross,
+  productiveStaff:productiveStaffGross, productiveApprentice:productiveAppGross,
+  unproductiveStaff:unproductiveStaffGross, unproductiveApprentice:unproductiveAppGross,
   productiveHours:sum(staffCosts,'productiveHours')+sum(appCosts,'productiveHours'),
   totalPayroll:sum(staffCosts,'total')+sum(appCosts,'total'),
-  lgSVprod, lgSVunprod,
-  lgAccident, lgEFG,
-  lgOtherProd, lgOtherUnprod,
-  lgCompProd, lgCompUnprod,
-  // Summen für Rückwärtskompatibilität
-  lgSV:lgSVprod+lgSVunprod,
-  lgOther:lgOtherTotal,
-  lgCompany:lgCompanyTotal
+  lgSVprod, lgSVunprod, lgAccident, lgEFG,
+  lgOtherProd:lgOtherT*avgR, lgOtherUnprod:lgOtherT*(1-avgR),
+  lgCompProd:lgCompT*avgR,   lgCompUnprod:lgCompT*(1-avgR),
+  lgSV:lgSVprod+lgSVunprod, lgOther:lgOtherT, lgCompany:lgCompT
  };
 }
 function setAutoBABRow(auto,group,name,amount,installation=70,verwaltung=30,material=0){
  let r=costRows.find(x=>x.auto===auto);
- if(!r){
-  r={id:Date.now()+Math.floor(Math.random()*1000),auto,group,name,
-     amount:0,calc:'automatisch aus Personal',
-     installation,verwaltung,material,_manualDist:false};
-  costRows.unshift(r);
- }
+ if(!r){r={id:Date.now()+Math.floor(Math.random()*1000),auto,group,name,amount:0,calc:'automatisch aus Personal',installation,verwaltung,material,_manualDist:false};costRows.unshift(r);}
  r.group=group; r.name=name; r.amount=round2(amount); r.calc='automatisch aus Personal';
- // Verteilung nur aktualisieren wenn nicht manuell geändert
- if(!r._manualDist){r.installation=installation; r.verwaltung=verwaltung; r.material=material;}
- const el=document.getElementById('rowAmount_'+r.id);
- if(el && document.activeElement!==el) el.value=round2(r.amount);
+ if(!r._manualDist){r.installation=installation;r.verwaltung=verwaltung;r.material=material;}
+ const el=document.getElementById('rowAmount_'+r.id); if(el&&document.activeElement!==el) el.value=round2(r.amount);
  return r;
 }
 
 function syncPayrollToBABAuto(updateProductiveHours=true){
  const s=payrollBABSplit();
-
- // ── EINZELKOSTEN: Fertigungslohn Brutto (produktiv) ──
+ // Einzelkosten
  setAutoBABRow('productivePayroll',  'Einzelkosten','Fertigungslohn (Brutto) produktive Mitarbeiter',s.productiveStaff,  100,0,0);
  setAutoBABRow('productiveApprentice','Einzelkosten','Fertigungslohn (Brutto) produktive Lehrlinge',  s.productiveApprentice,100,0,0);
-
- // ── LOHNGEBUNDENE GK: korrekt nach produktiv/unproduktiv aufgeteilt ──
- // SV auf produktiven Lohn  → 100% Installation / 0% Verwaltung
- setAutoBABRow('lgSVprod',   'lohngebundene GK','SV AG-Anteil auf Fertigungslohn (produktiv)',   s.lgSVprod,  100,0,0);
- // SV auf unproduktiven Lohn → 70% Installation / 30% Verwaltung
- setAutoBABRow('lgSVunprod', 'lohngebundene GK','SV AG-Anteil auf Hilfslöhne (unproduktiv)',     s.lgSVunprod, 70,30,0);
- // BG + EFG → 100% Installation (direkt produktionsbezogen)
- setAutoBABRow('lgAccident', 'lohngebundene GK','Berufsgenossenschaft / Unfallversicherung',     s.lgAccident,100,0,0);
- setAutoBABRow('lgEFG',      'lohngebundene GK','EFG-Umlage abzgl. Erstattung',                  s.lgEFG,     100,0,0);
- // Sonstige gesetzl. → nach Produktiv-Ratio aufgeteilt
- setAutoBABRow('lgOtherProd',  'lohngebundene GK','Sonstige gesetzl. Nebenkosten (produktiver Anteil)',  s.lgOtherProd, 100,0,0);
- setAutoBABRow('lgOtherUnprod','lohngebundene GK','Sonstige gesetzl. Nebenkosten (unproduktiver Anteil)',s.lgOtherUnprod,70,30,0);
- // Betriebliche Zusatzkosten → nach Produktiv-Ratio
- setAutoBABRow('lgCompProd',  'lohngebundene GK','Betriebliche Zusatzkosten (produktiver Anteil)',  s.lgCompProd, 100,0,0);
- setAutoBABRow('lgCompUnprod','lohngebundene GK','Betriebliche Zusatzkosten (unproduktiver Anteil)',s.lgCompUnprod,70,30,0);
-
- // ── LOHNUNABHÄNGIGE GK: unproduktive Bruttolöhne ──
+ // lohngebundene GK — korrekt nach produktiv/unproduktiv aufgeteilt
+ setAutoBABRow('lgSVprod',    'lohngebundene GK','SV AG-Anteil auf Fertigungslohn (produktiv)',           s.lgSVprod,   100,0,0);
+ setAutoBABRow('lgSVunprod',  'lohngebundene GK','SV AG-Anteil auf Hilfslöhne (unproduktiv)',             s.lgSVunprod,  70,30,0);
+ setAutoBABRow('lgAccident',  'lohngebundene GK','Berufsgenossenschaft / Unfallversicherung',             s.lgAccident, 100,0,0);
+ setAutoBABRow('lgEFG',       'lohngebundene GK','EFG-Umlage abzgl. Erstattung',                         s.lgEFG,      100,0,0);
+ setAutoBABRow('lgOtherProd', 'lohngebundene GK','Sonstige gesetzl. Nebenkosten (produktiver Anteil)',    s.lgOtherProd,100,0,0);
+ setAutoBABRow('lgOtherUnprod','lohngebundene GK','Sonstige gesetzl. Nebenkosten (unproduktiver Anteil)', s.lgOtherUnprod,70,30,0);
+ setAutoBABRow('lgCompProd',  'lohngebundene GK','Betriebliche Zusatzkosten (produktiver Anteil)',        s.lgCompProd, 100,0,0);
+ setAutoBABRow('lgCompUnprod','lohngebundene GK','Betriebliche Zusatzkosten (unproduktiver Anteil)',      s.lgCompUnprod,70,30,0);
+ // lohnunabhängige GK
  setAutoBABRow('unproductivePayroll',  'lohnunabhängige GK','Bruttolohn unproduktive Mitarbeiteranteile',s.unproductiveStaff,  70,30,0);
  setAutoBABRow('unproductiveApprentice','lohnunabhängige GK','Bruttolohn unproduktive Lehrlingsanteile', s.unproductiveApprentice,70,30,0);
-
  const ph=document.getElementById('productiveHours');
- if(updateProductiveHours && ph && document.activeElement!==ph) ph.value=round2(s.productiveHours);
+ if(updateProductiveHours&&ph&&document.activeElement!==ph) ph.value=round2(s.productiveHours);
  return s;
 }
-function syncPayrollToBAB(){syncPayrollToBABAuto(true); renderCostRows(); calcAll();}
+function syncPayrollToBAB(){syncPayrollToBABAuto(true);renderCostRows();calcAll();}
 
 function calcGFRate(){
  const monthlyWage=n("gfMonthlyWage")||5000;
@@ -728,26 +692,22 @@ function calcAll(){
 
  renderZuschlagTable(groupTotals, installBase, matBase);
 
- // GK-Zuschlag pro produktiver Stunde (aus BAB, für MA-Tabelle)
- const gkZuschlagStd = prodHours ? allGK/prodHours : 0;
-
- // Tabelle: Stundensatz je Mitarbeiter
- renderEmpRateTable(empResults, employees, gkZuschlagStd, n("profit"));
-
- // ── KORREKTER BETRIEBSSTUNDENSATZ (BAB / Perko-Methode) ──
- // Selbstkosten/Jahr = Fertigungslohn (BAB) + lohngebundene GK + lohnunabh. GK + Verwaltung
- // NICHT: mixed × (1 + overhead%) → das würde SV doppelt zählen!
+ // prodHours MUSS vor gkZuschlagStd definiert sein
  const prodHours=n("productiveHours")||totalProductive||1;
  const selbstkostenJahr=installBase+allGK;
  const selbstkostenStd=selbstkostenJahr/prodHours;
  const hourlyProfit=selbstkostenStd*(1+n("profit")/100);
  const minute=hourlyProfit/60;
+ const bab=selbstkostenStd;
+
+ // GK-Zuschlag pro Stunde (für MA-Tabelle)
+ const gkZuschlagStd=allGK/prodHours;
+ renderEmpRateTable(empResults, employees, gkZuschlagStd, n("profit"));
 
  // Materialzuschlag inkl. Gewinn
  const mf=n("matFactor")*(1+n("matProfit")/100)*(1+n("profit")/100);
  const matSell=n("matCost")*mf;
  const labor=n("minutes")*minute;
- const bab=selbstkostenStd; // Selbstkosten ohne Gewinn
  document.getElementById("hourlyRate").textContent=eur(hourlyProfit)+"/Std.";
  document.getElementById("minuteRate").textContent=eur(minute)+"/min";
  document.getElementById("mixedWage").textContent=eur(avgBrutto);
