@@ -838,7 +838,7 @@
   </div>
 
 </div><!-- /wrap -->
-<script src="app.js?v=20"></script>
+<script src="app.js?v=21"></script>
 <script>
 function doSaveTimeout(){
   const mins=parseInt(document.getElementById('settingsTimeout').value)||30;
@@ -880,12 +880,7 @@ function showSection(id, btn){
     }
   }
 }
-if("serviceWorker" in navigator){
-  // Alle alten Service Worker löschen damit kein alter Cache mehr aktiv ist
-  navigator.serviceWorker.getRegistrations().then(regs=>{
-    regs.forEach(r=>r.unregister());
-  });
-}
+if("serviceWorker" in navigator){navigator.serviceWorker.getRegistrations().then(regs=>{regs.forEach(r=>r.unregister());});}
 
 window.addEventListener('beforeunload', ()=>{
   try{
