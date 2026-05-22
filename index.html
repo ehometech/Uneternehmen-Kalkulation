@@ -880,8 +880,8 @@ function showSection(id, btn){
     }
   }
 }
-// Service Worker deaktiviert - kein Cache-Problem mehr
 if("serviceWorker" in navigator){
+  // Alle alten Service Worker löschen damit kein alter Cache mehr aktiv ist
   navigator.serviceWorker.getRegistrations().then(regs=>{
     regs.forEach(r=>r.unregister());
   });
