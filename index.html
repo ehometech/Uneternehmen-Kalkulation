@@ -1165,33 +1165,35 @@ function resetInactivityTimer(){
   const auth=getAuth();
   const overlay=document.getElementById('loginOverlay');
 
+  // Auto-Login: Wenn kein Konto → sofort anlegen und einloggen
   if(!auth){
-    // Kein Konto → Erster-Start-Hinweis
-    const link=document.querySelector('#viewLogin .login-link');
-    if(link)link.innerHTML='<span style="color:var(--muted);font-size:12px">Erster Start: E-Mail & Passwort frei wählen</span>';
-    overlay.style.display='flex';
+    const autoEmail='nutzer@kalkulation.app';
+    hashPassword('auto123').then(hash=>{
+      saveAuth({email:autoEmail,hash,timeoutMin:0});
+      _appUnlocked=true;
+      overlay.style.display='none';
+      setTimeout(()=>{autoLoadData();},150);
+    });
     return;
   }
 
-  // Session noch aktiv? (selber Browser-Tab, nicht geschlossen)
+  // Session noch aktiv?
   const session=getSession();
   if(session&&session.email===auth.email){
-    // Direkt einloggen ohne Passwort-Abfrage
     _appUnlocked=true;
     overlay.style.display='none';
     const emailEl=document.getElementById('settingsEmailDisplay');
     if(emailEl)emailEl.value=auth.email||'';
-    // Daten automatisch laden
     setTimeout(()=>{autoLoadData();resetInactivityTimer();},150);
     return;
   }
 
-  // Kein aktiver Session → Login zeigen, E-Mail vorausfüllen
-  const loginEmailEl=document.getElementById('loginEmail');
-  if(loginEmailEl&&auth.email)loginEmailEl.value=auth.email;
+  // Kein aktiver Session → direkt einloggen ohne Passwort
+  _appUnlocked=true;
+  overlay.style.display='none';
   const emailEl=document.getElementById('settingsEmailDisplay');
   if(emailEl)emailEl.value=auth.email||'';
-  overlay.style.display='flex';
+  setTimeout(()=>{autoLoadData();resetInactivityTimer();},150);
 })();
 // ===== CLAUDE KI =====
 function getApiKey(){return localStorage.getItem('kalk_api_key')||'';}
