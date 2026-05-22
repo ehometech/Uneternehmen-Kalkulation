@@ -16,12 +16,12 @@
       --amber:#7a4e00;--amber-bg:#fef9ee;--amber-border:#f0d090;
       --green:#1a4a1a;--green-bg:#eef6ee;--green-border:#a8d0a8;
       --red-bg:#fef2f2;--red-border:#fca5a5;--red:#7f1d1d;
-      --radius:12px;--radius-sm:8px;--shadow:0 1px 3px rgba(0,0,0,.07);
+      --radius:12px;--radius-sm:8px;--shadow:0 1px 3px rgba(0,0,0,.07);h
     }
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
     .wrap{max-width:1280px;margin:auto;padding:16px}
-
+h
     /* NAV */
     .nav{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:20px;background:var(--surface);border-radius:var(--radius);padding:6px;border:1px solid var(--border)}
     .nav-btn{padding:7px 14px;border-radius:var(--radius-sm);border:none;background:transparent;color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;transition:all .15s}
@@ -1167,7 +1167,7 @@ async function aiGenAngebot(){
   );
   if(text) resp.textContent=text;
 }
-let aiChatHistory=[];
+aiChatHistory=[];
 async function aiSendChat(){
   const input=document.getElementById('aiChatInput');
   const wrap=document.getElementById('aiChatWrap');
