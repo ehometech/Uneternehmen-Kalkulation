@@ -162,68 +162,8 @@
 </head>
 <body>
 
-<!-- ===== LOGIN OVERLAY ===== -->
-<div id="loginOverlay">
-  <div class="login-box">
-    <div class="login-logo">⚙ Kalkulations-App</div>
-    <div class="login-sub">BAB · Stundensatz · Angebot</div>
-
-    <!-- LOGIN -->
-    <div id="viewLogin" class="login-view active">
-      <div id="loginError" class="login-error"></div>
-      <div class="login-field">
-        <label>E-Mail</label>
-        <input type="email" id="loginEmail" placeholder="ihre@email.de" autocomplete="email">
-      </div>
-      <div class="login-field">
-        <label>Passwort</label>
-        <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
-      </div>
-      <button class="login-btn" onclick="doLogin()">Anmelden</button>
-      <div class="login-link"><a onclick="showLoginView('viewForgot')">Passwort vergessen?</a></div>
-    </div>
-
-    <!-- PASSWORT VERGESSEN -->
-    <div id="viewForgot" class="login-view">
-      <div id="forgotError" class="login-error"></div>
-      <div id="forgotSuccess" class="login-success"></div>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Gib deine E-Mail-Adresse ein. Du erhältst einen Reset-Code zum Zurücksetzen des Passworts.</p>
-      <div class="login-field">
-        <label>E-Mail</label>
-        <input type="email" id="forgotEmail" placeholder="ihre@email.de">
-      </div>
-      <button class="login-btn" onclick="doForgot()">Reset-Code anfordern</button>
-      <div class="login-link">
-        <a onclick="showLoginView('viewReset')">Ich habe einen Code</a> ·
-        <a onclick="showLoginView('viewLogin')">Zurück zum Login</a>
-      </div>
-    </div>
-
-    <!-- RESET CODE -->
-    <div id="viewReset" class="login-view">
-      <div id="resetError" class="login-error"></div>
-      <div id="resetSuccess" class="login-success"></div>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Gib deinen Reset-Code und dein neues Passwort ein.</p>
-      <div class="login-field">
-        <label>E-Mail</label>
-        <input type="email" id="resetEmail" placeholder="ihre@email.de">
-      </div>
-      <div class="login-field">
-        <label>Reset-Code (6 Stellen)</label>
-        <input type="text" id="resetCode" placeholder="123456" maxlength="6" style="letter-spacing:.2em;font-family:'DM Mono',monospace;font-size:20px">
-      </div>
-      <div class="login-field">
-        <label>Neues Passwort</label>
-        <input type="password" id="resetNewPw" placeholder="Mindestens 6 Zeichen" oninput="checkStrength(this,'resetStrength','resetStrengthLabel')">
-        <div class="pw-strength" id="resetStrength"></div>
-        <div class="pw-strength-label" id="resetStrengthLabel"></div>
-      </div>
-      <button class="login-btn" onclick="doResetPassword()">Passwort zurücksetzen</button>
-      <div class="login-link"><a onclick="showLoginView('viewLogin')">Zurück zum Login</a></div>
-    </div>
-
-  </div>
-</div>
+<!-- LOGIN OVERLAY - DEAKTIVIERT -->
+<div id="loginOverlay" style="display:none!important"></div>
 
 <div class="wrap">
 
@@ -239,7 +179,6 @@
       <button class="btn-primary btn-sm" onclick="exportJSON()" title="Als JSON-Datei speichern – sicherer als localStorage">⬇ Als Datei sichern</button>
       <label style="margin:0"><button class="btn-secondary btn-sm" type="button" onclick="document.getElementById('importFile').click()" title="JSON-Datei laden">⬆ Datei laden</button><input id="importFile" type="file" style="display:none" onchange="importJSON(event)"></label>
       <button class="btn-secondary btn-sm" onclick="window.print()">🖨 Drucken</button>
-      <button class="btn-secondary btn-sm" onclick="doLogout()">🔒 Abmelden</button>
       <span id="saveStatus" style="display:none;font-size:12px;font-weight:500;padding:4px 10px;border-radius:6px;background:var(--green-bg);border:1px solid var(--green-border)"></span>
     </div>
   </div>
@@ -1160,40 +1099,12 @@ function resetInactivityTimer(){
   document.addEventListener(ev,()=>{if(_appUnlocked){localStorage.setItem('kalk_last_activity',Date.now().toString());resetInactivityTimer();}},{passive:true});
 });
 
-// ── STARTUP: einmalig beim Laden ──
+// ── STARTUP: Kein Login erforderlich - direkt öffnen ──
 (function initAuth(){
-  const auth=getAuth();
-  const overlay=document.getElementById('loginOverlay');
-
-  // Auto-Login: Wenn kein Konto → sofort anlegen und einloggen
-  if(!auth){
-    const autoEmail='nutzer@kalkulation.app';
-    hashPassword('auto123').then(hash=>{
-      saveAuth({email:autoEmail,hash,timeoutMin:0});
-      _appUnlocked=true;
-      overlay.style.display='none';
-      setTimeout(()=>{autoLoadData();},150);
-    });
-    return;
-  }
-
-  // Session noch aktiv?
-  const session=getSession();
-  if(session&&session.email===auth.email){
-    _appUnlocked=true;
-    overlay.style.display='none';
-    const emailEl=document.getElementById('settingsEmailDisplay');
-    if(emailEl)emailEl.value=auth.email||'';
-    setTimeout(()=>{autoLoadData();resetInactivityTimer();},150);
-    return;
-  }
-
-  // Kein aktiver Session → direkt einloggen ohne Passwort
   _appUnlocked=true;
-  overlay.style.display='none';
-  const emailEl=document.getElementById('settingsEmailDisplay');
-  if(emailEl)emailEl.value=auth.email||'';
-  setTimeout(()=>{autoLoadData();resetInactivityTimer();},150);
+  const overlay=document.getElementById('loginOverlay');
+  if(overlay) overlay.style.display='none';
+  setTimeout(()=>{ try{autoLoadData();}catch(e){} },200);
 })();
 // ===== CLAUDE KI =====
 function getApiKey(){return localStorage.getItem('kalk_api_key')||'';}
