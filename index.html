@@ -162,8 +162,13 @@
 </head>
 <body>
 
-<!-- LOGIN OVERLAY - DEAKTIVIERT -->
-<div id="loginOverlay" style="display:none!important"></div>
+
+<div id="loginOverlay" style="display:none!important">
+  <div id="viewLogin"><div id="loginError"></div></div>
+  <div id="viewForgot"><div id="forgotError"></div><div id="forgotSuccess"></div><input id="forgotEmail"></div>
+  <div id="viewReset"><div id="resetError"></div><div id="resetSuccess"></div><input id="resetEmail"><input id="resetCode"><input id="resetNewPw"><div id="resetStrength"></div><div id="resetStrengthLabel"></div></div>
+  <input id="loginEmail" style="display:none"><input id="loginPassword" style="display:none">
+</div>
 
 <div class="wrap">
 
@@ -179,6 +184,7 @@
       <button class="btn-primary btn-sm" onclick="exportJSON()" title="Als JSON-Datei speichern – sicherer als localStorage">⬇ Als Datei sichern</button>
       <label style="margin:0"><button class="btn-secondary btn-sm" type="button" onclick="document.getElementById('importFile').click()" title="JSON-Datei laden">⬆ Datei laden</button><input id="importFile" type="file" style="display:none" onchange="importJSON(event)"></label>
       <button class="btn-secondary btn-sm" onclick="window.print()">🖨 Drucken</button>
+      
       <span id="saveStatus" style="display:none;font-size:12px;font-weight:500;padding:4px 10px;border-radius:6px;background:var(--green-bg);border:1px solid var(--green-border)"></span>
     </div>
   </div>
@@ -1099,12 +1105,11 @@ function resetInactivityTimer(){
   document.addEventListener(ev,()=>{if(_appUnlocked){localStorage.setItem('kalk_last_activity',Date.now().toString());resetInactivityTimer();}},{passive:true});
 });
 
-// ── STARTUP: Kein Login erforderlich - direkt öffnen ──
+// ── STARTUP: Kein Login - direkt öffnen ──
 (function initAuth(){
   _appUnlocked=true;
-  const overlay=document.getElementById('loginOverlay');
-  if(overlay) overlay.style.display='none';
-  setTimeout(()=>{ try{autoLoadData();}catch(e){} },200);
+  document.getElementById('loginOverlay').style.display='none';
+  setTimeout(()=>{ try{autoLoadData();}catch(e){console.log(e);} },300);
 })();
 // ===== CLAUDE KI =====
 function getApiKey(){return localStorage.getItem('kalk_api_key')||'';}
