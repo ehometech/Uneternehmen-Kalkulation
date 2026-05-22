@@ -838,7 +838,7 @@
   </div>
 
 </div><!-- /wrap -->
-<script src="app.js?v=12"></script>
+<script src="app.js?v=20"></script>
 <script>
 function doSaveTimeout(){
   const mins=parseInt(document.getElementById('settingsTimeout').value)||30;
@@ -880,7 +880,12 @@ function showSection(id, btn){
     }
   }
 }
-if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
+// Service Worker deaktiviert - kein Cache-Problem mehr
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.getRegistrations().then(regs=>{
+    regs.forEach(r=>r.unregister());
+  });
+}
 
 window.addEventListener('beforeunload', ()=>{
   try{
