@@ -281,6 +281,55 @@ function syncPayrollToBAB(){syncPayrollToBABAuto(true); renderCostRows(); calcAl
 
 function setText(id,value){const el=document.getElementById(id); if(el) el.textContent=value;}
 
+function renderDashboard(m){
+ const {
+  hourlyProfit=0, selbstkostenStd=0, totalProductive=0, totalPayroll=0,
+  allAnnualCost=0, qDbPct=0, qDb=0, qNet=0, prodHours=0
+ }=m||{};
+ const profitPct=n('profit');
+ const monthlyTarget=(allAnnualCost*(1+profitPct/100))/12;
+ setText('dashHourly',eur(hourlyProfit)+'/h');
+ setText('dashCostHourly',eur(selbstkostenStd)+'/h');
+ setText('dashProdHours',totalProductive.toLocaleString('de-DE',{maximumFractionDigits:0})+' h');
+ setText('dashPayroll',eur(totalPayroll));
+ setText('dashAnnualCost',eur(allAnnualCost));
+ setText('dashMonthlyTarget',eur(monthlyTarget));
+ setText('dashOfferDbPct',pct(qDbPct));
+ setText('dashProfitPct',pct(profitPct));
+
+ const alerts=[];
+ let score=100;
+ const badSplits=costRows.filter(r=>Math.abs(num(r.installation)+num(r.verwaltung)+num(r.material)-100)>0.01);
+ if(!employees.length){alerts.push({level:'danger',text:'Keine Mitarbeiter angelegt. Ohne Personalbasis ist der Stundensatz nicht belastbar.'});score-=35;}
+ if(totalProductive<=0){alerts.push({level:'danger',text:'Keine produktiven Stunden berechnet. Prüfe Arbeitszeit, Fehlzeiten und Produktivität.'});score-=35;}
+ if(badSplits.length){alerts.push({level:'warn',text:`${badSplits.length} BAB-Zeile(n) sind nicht vollständig auf 100 % verteilt.`});score-=Math.min(20,badSplits.length*4);}
+ const reviewRows=costRows.filter(r=>num(r.amount)>0 && /prüfen/i.test(String(r.name||'')));
+ if(reviewRows.length){alerts.push({level:'warn',text:`${reviewRows.length} BAB-Position(en) sind noch als „prüfen“ markiert. Doppelzählungen sind dadurch möglich.`});score-=Math.min(20,reviewRows.length*3);}
+ const manualProd=n('productiveHours');
+ if(manualProd>0 && totalProductive>0){
+  const diff=Math.abs(manualProd-totalProductive)/totalProductive*100;
+  if(diff>10){alerts.push({level:'warn',text:`Manuelle produktive Stunden weichen um ${diff.toLocaleString('de-DE',{maximumFractionDigits:0})} % von der Personalberechnung ab.`});score-=10;}
+ }
+ if(profitPct<0){alerts.push({level:'danger',text:'Der Gewinnzuschlag ist negativ. Damit liegt der Verkaufssatz unter den berechneten Selbstkosten.'});score-=25;}
+ else if(profitPct<5){alerts.push({level:'warn',text:'Der Gewinnzuschlag ist sehr niedrig. Prüfe, ob Wagnis und Unternehmerrisiko ausreichend berücksichtigt sind.'});score-=8;}
+ if(n('matFactor')<1){alerts.push({level:'danger',text:'Der Materialfaktor liegt unter 1,00. Material würde unter Einkaufspreis kalkuliert.'});score-=20;}
+ if(qNet>0 && qDb<0){alerts.push({level:'danger',text:'Das aktuell kalkulierte Angebot hat einen negativen Deckungsbeitrag.'});score-=30;}
+ else if(qNet>0 && qDbPct<10){alerts.push({level:'warn',text:'Der Deckungsbeitrag des aktuellen Angebots liegt unter 10 %. Prüfe Preis, Zeitansatz und Materialaufschlag.'});score-=8;}
+ if(allAnnualCost<=0){alerts.push({level:'warn',text:'Es wurde noch keine belastbare jährliche Kostenbasis erfasst.'});score-=20;}
+ if(!alerts.length)alerts.push({level:'ok',text:'Keine offensichtlichen Plausibilitätsfehler erkannt. Die Kalkulation wirkt formal vollständig.'});
+ score=Math.max(0,Math.min(100,Math.round(score)));
+ setText('dashHealthScore',score+'/100');
+ const pill=document.getElementById('dashStatusPill');
+ const statusText=document.getElementById('dashStatusText');
+ let cls='green',label='● Kalkulation plausibel',txt='Keine kritischen Hinweise erkannt.';
+ if(score<60){cls='red';label='● Handlungsbedarf';txt='Mehrere kritische Punkte sollten geprüft werden.';}
+ else if(score<85){cls='amber';label='● Bitte prüfen';txt='Einige Eingaben oder Annahmen brauchen Aufmerksamkeit.';}
+ if(pill){pill.className='status-pill '+cls;pill.textContent=label;}
+ if(statusText)statusText.textContent=txt;
+ const wrap=document.getElementById('dashAlerts');
+ if(wrap)wrap.innerHTML=alerts.map(a=>`<div class="alert-item ${a.level}">${a.level==='danger'?'🔴':a.level==='warn'?'⚠️':'✅'} ${a.text}</div>`).join('');
+}
+
 function renderEmpRateTable(empResults, employees, gkZuschlagStd, profitPct){
  const body=document.getElementById('empRateBody');
  if(!body) return;
@@ -669,6 +718,8 @@ function calcAll(){
   };
  });
 
+ const allAnnualCost=costRows.reduce((sum,r)=>sum+num(r.amount),0);
+
  // ── BAB-Kostenbasis ──
  // Einzelkosten: Fertigungslohn (Brutto, produktiver Anteil) aus BAB
  const installBase=costRows.filter(r=>r.group==="Einzelkosten")
@@ -756,7 +807,15 @@ function calcAll(){
  setText("pkGesamtkosten",eur(pkGesamtkosten));
  setText("pkAnteil",pct(pkAnteil));
 
- const monProfit=n("monRev")-n("monCost");document.getElementById("monProfit").textContent=eur(monProfit);document.getElementById("yearProfit").textContent=eur(monProfit*12);document.getElementById("profitability").textContent=pct(n("monRev")?monProfit/n("monRev")*100:0);document.getElementById("targetRevenue").textContent=eur(n("monCost")/(1-n("targetProfit")/100||1))
+ const monProfit=n("monRev")-n("monCost");
+ setText("monProfit",eur(monProfit));
+ setText("yearProfit",eur(monProfit*12));
+ setText("profitability",pct(n("monRev")?monProfit/n("monRev")*100:0));
+ setText("targetRevenue",eur(n("monCost")/(1-n("targetProfit")/100||1)));
+ renderDashboard({
+  hourlyProfit,selbstkostenStd,totalProductive,totalPayroll,allAnnualCost,
+  qDbPct:qNet?qDb/qNet*100:0,qDb,qNet,prodHours
+ });
 }
 function runCalc(){document.getElementById("calcResult").textContent=eur(safeCalc(document.getElementById("calcInput").value))}
 function showSaveStatus(msg,ok=true){
@@ -911,7 +970,7 @@ function autoLoadData(){
  }).catch(()=>{});
 }
 
-// ===== CLAUDE KI-FUNKTIONEN =====
+// ===== CLAUDE KI-FUNKTIONEN (GitHub-Pages-kompatibel) =====
 function getApiKey(){return localStorage.getItem('kalk_api_key')||'';}
 
 function doSaveApiKey(){
@@ -925,25 +984,37 @@ function doSaveApiKey(){
 }
 
 async function callClaude(messages, systemPrompt){
-  // Netlify Proxy verwenden (API-Key sicher auf dem Server)
+  const key=getApiKey();
+  if(!key){
+    alert('Bitte zuerst den Anthropic API-Key in den Einstellungen eintragen.');
+    return null;
+  }
   try{
-    const resp=await fetch('/api/claude',{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({system:systemPrompt, messages})
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key':key,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1500,
+        system:systemPrompt,
+        messages
+      })
     });
     if(!resp.ok){
-      const e=await resp.text();
-      throw new Error('Status '+resp.status+': '+e);
+      const detail=await resp.text();
+      throw new Error('Status '+resp.status+': '+detail);
     }
     const data=await resp.json();
-    if(data.error) throw new Error(JSON.stringify(data.error));
     return data.content?.[0]?.text||'Keine Antwort erhalten.';
   }catch(e){
-    return '❌ Fehler: '+e.message;
+    return '❌ KI-Anfrage fehlgeschlagen: '+e.message;
   }
 }
-
 function getKalkContext(){
   const hrs=document.getElementById('hourlyRate')?.textContent||'?';
   const bab=document.getElementById('babHourly')?.textContent||'?';

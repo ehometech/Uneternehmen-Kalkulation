@@ -1,5 +1,5 @@
 // Service Worker - löscht alten Cache sofort
-const CACHE_NAME = 'kalk-v20';
+const CACHE_NAME = 'kalk-v22';
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => {
   e.waitUntil(

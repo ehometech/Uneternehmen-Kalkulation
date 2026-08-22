@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#1a1a2e">
   <link rel="manifest" href="manifest.json">
-  <title>Kalkulations-App BAB</title>
+  <title>Unternehmens-Kalkulation BAB</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
@@ -16,12 +16,26 @@
       --amber:#7a4e00;--amber-bg:#fef9ee;--amber-border:#f0d090;
       --green:#1a4a1a;--green-bg:#eef6ee;--green-border:#a8d0a8;
       --red-bg:#fef2f2;--red-border:#fca5a5;--red:#7f1d1d;
-      --radius:12px;--radius-sm:8px;--shadow:0 1px 3px rgba(0,0,0,.07);h
+      --radius:12px;--radius-sm:8px;--shadow:0 1px 3px rgba(0,0,0,.07);
     }
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
     .wrap{max-width:1280px;margin:auto;padding:16px}
-h
+    /* DASHBOARD */
+    .dashboard-hero{display:grid;grid-template-columns:1.35fr .65fr;gap:16px;margin-bottom:16px}
+    .status-card{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;min-height:150px}
+    .status-pill{display:inline-flex;align-items:center;gap:7px;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:700;margin-bottom:10px}
+    .status-pill.green{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+    .status-pill.amber{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border)}
+    .status-pill.red{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
+    .health-score{font-size:38px;line-height:1;font-family:'DM Mono',monospace;font-weight:600;color:var(--accent);margin:4px 0 8px}
+    .alert-list{display:grid;gap:8px;margin-top:12px}
+    .alert-item{padding:10px 12px;border-radius:var(--radius-sm);font-size:13px;border:1px solid var(--border);background:var(--surface2)}
+    .alert-item.warn{background:var(--amber-bg);border-color:var(--amber-border);color:var(--amber)}
+    .alert-item.danger{background:var(--red-bg);border-color:var(--red-border);color:var(--red)}
+    .alert-item.ok{background:var(--green-bg);border-color:var(--green-border);color:var(--green)}
+    @media(max-width:760px){.dashboard-hero{grid-template-columns:1fr}.header{padding:16px}.nav{position:sticky;top:0;z-index:20;box-shadow:0 6px 18px rgba(0,0,0,.06)}}
+
     /* NAV */
     .nav{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:20px;background:var(--surface);border-radius:var(--radius);padding:6px;border:1px solid var(--border)}
     .nav-btn{padding:7px 14px;border-radius:var(--radius-sm);border:none;background:transparent;color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;transition:all .15s}
@@ -175,8 +189,8 @@ h
   <!-- HEADER -->
   <div class="header">
     <div>
-      <h1>Kalkulations-App BAB</h1>
-      <div class="sub">Stundensatz · Gemeinkosten · Angebot · Fahrzeug · Deckungsbeitrag</div>
+      <h1>Unternehmens-Kalkulation</h1>
+      <div class="sub">Dashboard · Stundensatz · Gemeinkosten · Angebot · Deckungsbeitrag</div>
     </div>
     <div class="header-actions no-print">
       <button class="btn-secondary btn-sm" onclick="saveData()" title="Im Browser-Speicher speichern (localStorage)">💾 Speichern</button>
@@ -199,7 +213,8 @@ h
 
   <!-- NAV -->
   <div class="nav no-print">
-    <button class="nav-btn active" onclick="showSection('sec-personal',this)">👤 Personal</button>
+    <button class="nav-btn active" onclick="showSection('sec-dashboard',this)">🏠 Dashboard</button>
+    <button class="nav-btn" onclick="showSection('sec-personal',this)">👤 Personal</button>
     <button class="nav-btn" onclick="showSection('sec-bab',this)">📊 BAB / Jahreskosten</button>
     <button class="nav-btn" onclick="showSection('sec-ergebnis',this)">🎯 Stundensatz</button>
     <button class="nav-btn" onclick="showSection('sec-fahrzeug',this)">🚐 Fahrzeug</button>
@@ -212,8 +227,50 @@ h
     <button class="nav-btn" onclick="showSection('sec-ki',this)">🤖 KI-Assistent</button>
   </div>
 
+  <!-- ===== DASHBOARD ===== -->
+  <div id="sec-dashboard" class="section active">
+    <div class="dashboard-hero">
+      <div class="card" style="margin-bottom:0">
+        <div class="card-title">Unternehmens-Cockpit</div>
+        <div class="card-sub">Die wichtigsten Kennzahlen aus Personal, BAB und Angebotskalkulation auf einen Blick.</div>
+        <div class="kpi-grid" style="margin-bottom:0">
+          <div class="kpi-card highlight"><div class="kpi-label">Verrechnungssatz</div><div class="kpi-val" id="dashHourly">0,00 €</div></div>
+          <div class="kpi-card"><div class="kpi-label">Selbstkosten / Stunde</div><div class="kpi-val" id="dashCostHourly">0,00 €</div></div>
+          <div class="kpi-card"><div class="kpi-label">Produktive Stunden / Jahr</div><div class="kpi-val" id="dashProdHours">0 h</div></div>
+          <div class="kpi-card"><div class="kpi-label">Personalkosten / Jahr</div><div class="kpi-val" id="dashPayroll">0,00 €</div></div>
+          <div class="kpi-card"><div class="kpi-label">Kostenbasis / Jahr</div><div class="kpi-val" id="dashAnnualCost">0,00 €</div></div>
+          <div class="kpi-card"><div class="kpi-label">Zielumsatz / Monat</div><div class="kpi-val" id="dashMonthlyTarget">0,00 €</div></div>
+          <div class="kpi-card"><div class="kpi-label">Aktueller Angebots-DB</div><div class="kpi-val" id="dashOfferDbPct">0,00 %</div></div>
+          <div class="kpi-card"><div class="kpi-label">Gewinnzuschlag</div><div class="kpi-val" id="dashProfitPct">0,00 %</div></div>
+        </div>
+      </div>
+      <div class="card status-card" style="margin-bottom:0">
+        <div id="dashStatusPill" class="status-pill amber">● Prüfung läuft</div>
+        <div class="muted small">Kalkulations-Status</div>
+        <div class="health-score" id="dashHealthScore">0/100</div>
+        <div class="small muted" id="dashStatusText">Bitte zuerst Personal und BAB prüfen.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Plausibilitätsprüfung</div>
+      <div class="card-sub">Die App weist auf typische Eingabe- und Kalkulationsrisiken hin. Hinweise ersetzen keine steuerliche oder betriebswirtschaftliche Prüfung.</div>
+      <div id="dashAlerts" class="alert-list"><div class="alert-item warn">Noch keine Prüfung berechnet.</div></div>
+    </div>
+
+    <div class="card blue">
+      <div class="card-title">Schnellzugriff</div>
+      <div class="btn-row" style="margin-bottom:0">
+        <button class="btn-primary" onclick="showSection('sec-personal',document.querySelector('[onclick*=sec-personal]'))">👤 Personal prüfen</button>
+        <button class="btn-secondary" onclick="showSection('sec-bab',document.querySelector('[onclick*=sec-bab]'))">📊 BAB öffnen</button>
+        <button class="btn-secondary" onclick="showSection('sec-angebot',document.querySelector('[onclick*=sec-angebot]'))">📋 Angebot kalkulieren</button>
+        <button class="btn-secondary" onclick="exportJSON()">⬇ Backup erstellen</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== SECTION 1: PERSONAL ===== -->
-  <div id="sec-personal" class="section active">
+  <div id="sec-personal" class="section">
 
     <div class="card">
       <div class="card-title">Mitarbeiter &amp; Personalkosten</div>
@@ -717,27 +774,25 @@ h
     </div>
   </div>
 
-</div><!-- /wrap -->
-
 
   <!-- ===== SECTION: EINSTELLUNGEN ===== -->
   <div id="sec-einstellungen" class="section">
 
     <div class="settings-group">
       <div class="settings-group-title">🤖 Claude KI — API-Schlüssel</div>
-      <div class="settings-group-sub">Gib deinen Anthropic API-Key ein. Er wird nur lokal in deinem Browser gespeichert. Key holen: <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> (kostenlos starten).</div>
+      <div class="settings-group-sub">Für die KI-Funktion auf GitHub Pages wird dein Anthropic API-Key lokal in diesem Browser gespeichert und bei einer KI-Anfrage direkt an Anthropic übertragen. Verwende diese Funktion nur auf deinem eigenen Gerät. Key-Verwaltung: <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a>.</div>
       <div id="settingsApiSuccess" class="login-success"></div>
       <div class="login-field" style="max-width:420px">
         <label>API-Key (sk-ant-...)</label>
         <input type="password" id="settingsApiKey" placeholder="sk-ant-api03-..." autocomplete="off">
       </div>
       <button class="btn-primary" onclick="doSaveApiKey()">🔑 API-Key speichern</button>
-      <div class="info-box" style="margin-top:8px">💡 Ca. <b>0,003 € / Anfrage</b>. Dein Key bleibt auf deinem Gerät — er wird nie übertragen.</div>
+      <div class="warn-box" style="margin-top:8px">🔐 <b>Wichtig:</b> Der Schlüssel liegt lokal im Browser, muss für KI-Anfragen aber an Anthropic gesendet werden. Auf gemeinsam genutzten Rechnern solltest du ihn nicht speichern. Die tatsächlichen API-Kosten hängen von Modell und Nutzung ab.</div>
     </div>
 
     <div class="settings-group">
       <div class="settings-group-title">👤 Konto-Information</div>
-      <div class="settings-group-sub">Deine aktuell angemeldete E-Mail-Adresse.</div>
+      <div class="settings-group-sub">Lokale Geräteeinstellung. Hinweis: Ein rein browserbasierter Login auf einer öffentlichen GitHub-Pages-Seite ist kein echter Server-Zugriffsschutz. Für mehrere Benutzer sollte später Firebase Authentication verwendet werden.</div>
       <div class="login-field" style="max-width:340px">
         <label>Angemeldete E-Mail</label>
         <input type="text" id="settingsEmailDisplay" readonly style="background:var(--surface2);color:var(--muted)">
@@ -840,7 +895,7 @@ h
 </div><!-- /wrap -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-<script src="app.js?v=21"></script>
+<script src="app.js?v=22"></script>
 <script src="firebase-sync.js"></script>
 <script>
 function doSaveTimeout(){
@@ -1114,85 +1169,8 @@ function resetInactivityTimer(){
   document.getElementById('loginOverlay').style.display='none';
   setTimeout(()=>{ try{autoLoadData();}catch(e){console.log(e);} },300);
 })();
-// ===== CLAUDE KI =====
-function getApiKey(){return localStorage.getItem('kalk_api_key')||'';}
-function doSaveApiKey(){
-  const key=document.getElementById('settingsApiKey')?.value.trim();
-  if(!key){alert('Bitte API-Key eingeben.');return;}
-  localStorage.setItem('kalk_api_key',key);
-  document.getElementById('settingsApiKey').value='';
-  const ok=document.getElementById('settingsApiSuccess');
-  if(ok){ok.innerHTML='✓ API-Key gespeichert.';ok.style.display='block';setTimeout(()=>ok.style.display='none',3000);}
-}
-async function callClaude(messages,systemPrompt){
-  const key=getApiKey();
-  if(!key){alert('Bitte zuerst den Anthropic API-Key in den Einstellungen eintragen.');return null;}
-  try{
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,system:systemPrompt,messages})
-    });
-    if(!resp.ok){const e=await resp.text();throw new Error(e);}
-    const data=await resp.json();
-    return data.content?.[0]?.text||'Keine Antwort.';
-  }catch(e){return '❌ Fehler: '+e.message+'\n\nBitte API-Key in den Einstellungen prüfen.';}
-}
-function getKalkContext(){
-  const hrs=document.getElementById('hourlyRate')?.textContent||'?';
-  const bab=document.getElementById('babHourly')?.textContent||'?';
-  const pay=document.getElementById('payrollTotal')?.textContent||'?';
-  const ph=document.getElementById('payrollProductive')?.textContent||'?';
-  return `Aktuelle Kalkulations-Daten:\n- Stundenverrechnungssatz: ${hrs}\n- Selbstkosten/Std.: ${bab}\n- Personalkosten/Jahr: ${pay}\n- Produktive Std./Jahr: ${ph}\n- Gewinn: ${n('profit')}%`;
-}
-async function aiCheckKalkulation(){
-  const panel=document.getElementById('aiKalkPanel');
-  const resp=document.getElementById('aiKalkResponse');
-  if(!panel||!resp)return;
-  panel.classList.add('open');
-  resp.innerHTML='<span class="ai-thinking">🤖 Claude analysiert…</span>';
-  const text=await callClaude(
-    [{role:'user',content:`Analysiere meine Kalkulation und gib konkrete Empfehlungen:\n${getKalkContext()}`}],
-    'Du bist Kalkulations-Experte für deutsches Elektro-Handwerk. Analysiere und gib praxisnahe Empfehlungen auf Deutsch.'
-  );
-  if(text) resp.textContent=text;
-}
-async function aiGenAngebot(){
-  const panel=document.getElementById('aiAngebotPanel');
-  const resp=document.getElementById('aiAngebotResponse');
-  if(!panel||!resp)return;
-  panel.classList.add('open');
-  resp.innerHTML='<span class="ai-thinking">🤖 Erstelle Angebotstext…</span>';
-  const positions=calcPositions.map((p,i)=>`${i+1}. ${p.name} (${p.qty} ${p.unit})`).join('\n');
-  const text=await callClaude(
-    [{role:'user',content:`Erstelle einen professionellen Angebotstext für ein Elektro-Handwerk.\nPositionen:\n${positions||'(keine Positionen)'}\nStundensatz: ${document.getElementById('hourlyRate')?.textContent}`}],
-    'Du bist Handwerksmeister und schreibst professionelle Angebote auf Deutsch.'
-  );
-  if(text) resp.textContent=text;
-}
-aiChatHistory=[];
-async function aiSendChat(){
-  const input=document.getElementById('aiChatInput');
-  const wrap=document.getElementById('aiChatWrap');
-  const btn=document.getElementById('aiChatBtn');
-  const msg=input?.value.trim();
-  if(!msg||!wrap)return;
-  input.value=''; if(btn)btn.disabled=true;
-  wrap.innerHTML+=`<div class="ai-msg user">${msg.replace(/</g,'&lt;')}</div>`;
-  const thinking=document.createElement('div');
-  thinking.className='ai-msg ai';
-  thinking.innerHTML='<span class="ai-thinking">🤖 Claude denkt…</span>';
-  wrap.appendChild(thinking);
-  wrap.scrollTop=wrap.scrollHeight;
-  aiChatHistory.push({role:'user',content:msg});
-  const text=await callClaude(aiChatHistory,`Du bist KI-Assistent für ein deutsches Handwerksunternehmen.\n${getKalkContext()}\nAntworte kurz und praxisnah auf Deutsch.`);
-  aiChatHistory.push({role:'assistant',content:text||''});
-  thinking.innerHTML=(text||'Fehler').replace(/</g,'&lt;').replace(/\n/g,'<br>');
-  if(btn)btn.disabled=false;
-  wrap.scrollTop=wrap.scrollHeight;
-}
-function aiQuick(q){const i=document.getElementById('aiChatInput');if(i)i.value=q;aiSendChat();}
-function aiClearChat(){aiChatHistory=[];const w=document.getElementById('aiChatWrap');if(w)w.innerHTML='<div class="ai-msg ai">👋 Chat geleert. Wie kann ich helfen?</div>';}
+// KI-Funktionen liegen zentral in app.js.
+
 </script>
 <style>
 .ai-btn{background:linear-gradient(135deg,#6c4de8,#4a90d9);color:#fff;border:none;border-radius:10px;padding:10px 18px;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:inline-flex;align-items:center;gap:6px;transition:opacity .15s}

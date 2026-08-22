@@ -1,6 +1,6 @@
 {
-  "name": "Kalkulations-App BAB",
-  "short_name": "Kalkulation BAB",
+  "name": "Unternehmens-Kalkulation BAB",
+  "short_name": "Kalkulation",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f8fafc",
